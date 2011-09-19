@@ -38,6 +38,10 @@ ifeq (,$(OS))
         endif
     endif
 endif
+# make Windows_NT lowercase
+ifeq (Win,$(findstring Win,$(OS)))
+	OS:=win32
+endif
 
 # For now, 32 bit is the default model
 ifeq (,$(MODEL))
@@ -58,6 +62,7 @@ SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(E
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+MKDIR=mkdir
 
 # Variable defined in an OS-dependent manner (see below)
 CC =
@@ -108,6 +113,12 @@ ifeq ($(CC),cc)
 	else
 		CFLAGS += -O3
 	endif
+else
+	ifeq ($(BUILD),debug)
+		CFLAGS += -g
+	else
+		CFLAGS += -O
+	endif
 endif
 
 # Set DFLAGS
@@ -115,7 +126,7 @@ DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -m$(MODEL)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
-	DFLAGS += -O -release -nofloat
+	DFLAGS += -g -O -release -nofloat
 endif
 
 # Set DOTOBJ and DOTEXE
@@ -126,7 +137,7 @@ ifeq (,$(findstring win,$(OS)))
 else
 	DOTOBJ:=.obj
 	DOTEXE:=.exe
-	PATHSEP:=$(shell echo "\\")
+	PATHSEP:=$(subst /,\,/)
 endif
 
 # Set LINKOPTS
@@ -137,11 +148,11 @@ ifeq (,$(findstring win,$(OS)))
         LINKOPTS=-L-ldl -L-L$(ROOT)
     endif
 else
-    LINKOPTS=-L/co $(LIB)
+    LINKOPTS= $(LIB) -map $@.map
 endif
 
 # Set DDOC, the documentation generator
-DDOC=dmd
+DDOC=$(DMD)
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
@@ -171,7 +182,8 @@ EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
 EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
 EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
-		winsock) $(addprefix std/windows/, charset iunknown syserror)
+		winsock) $(addprefix std/windows/, charset iunknown syserror)	\
+		$(addprefix std/, __fileinit)
 ifeq (,$(findstring win,$(OS)))
 	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_LINUX)
 else
@@ -238,7 +250,11 @@ endif
 ################################################################################
 
 $(ROOT)/%$(DOTOBJ) : %.c
+ifeq (,$(findstring win,$(OS)))
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
+else
+	@$(MKDIR) -p $(dir $@).
+endif
 	$(CC) -c $(CFLAGS) $< -o$@
 
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
@@ -255,29 +271,34 @@ DISABLED_TESTS += std/format
 DISABLED_TESTS += std/math
 # seems to infinite loop, need to reduce
 
+endif
+
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
-endif
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
-	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
-	 	$(ROOT)/emptymain.d $<
+	@$(subst /,$(PATHSEP),$(DMD) $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
+	 	$(ROOT)/emptymain.d $< )
 # make the file very old so it builds and runs again if it fails
-	@touch -t 197001230123 $@
+#	@touch -t 197001230123 $@
 # run unittest in its own directory
 	@$(RUN) $@
 # succeeded, render the file new again
-	@touch $@
+#	@touch $@
 
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)
 
 $(ROOT)/emptymain.d : $(ROOT)/.directory
+ifeq (,$(findstring win,$(OS)))
 	@echo 'void main(){}' >$@
+else
+	@echo void main(){} >$@
+endif
 
 $(ROOT)/.directory :
-	mkdir -p $(ROOT) || exists $(ROOT)
+	$(MKDIR) -p $(ROOT) || exists $(ROOT)
 	touch $@
 
 clean :
@@ -289,8 +310,10 @@ zip :
 install : release
 	sudo cp $(LIB) /usr/lib/
 
+ifeq (,$(findstring win,$(OS)))
 $(DRUNTIME) :
 	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak
+endif
 
 ###########################################################
 # html documentation
@@ -301,7 +324,7 @@ BIGHTMLS=$(addprefix $(BIGDOC_OUTPUT_DIR)/, $(subst /,_,$(subst	\
 	.d,.html, $(SRC_DOCUMENTABLES))))
 
 $(DOC_OUTPUT_DIR)/. :
-	mkdir -p $@
+	$(MKDIR) -p $@
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
@@ -313,6 +336,9 @@ $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_windows_%.html : std/windows/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
