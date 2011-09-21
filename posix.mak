@@ -257,7 +257,7 @@ else
 endif
 	$(CC) -c $(CFLAGS) $< -o$@
 
-$(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+$(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(MAKEFILE)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 ifeq ($(MODEL),64)
@@ -278,6 +278,7 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
+ifeq (,$(findstring win,$(OS)))
 	@$(subst /,$(PATHSEP),$(DMD) $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
 	 	$(ROOT)/emptymain.d $< )
 # make the file very old so it builds and runs again if it fails
@@ -286,6 +287,10 @@ $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@$(RUN) $@
 # succeeded, render the file new again
 #	@touch $@
+else
+	@$(subst /,$(PATHSEP),$(DMD) $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
+	 	$(ROOT)/emptymain.d $< ) || $(RM) $@
+endif
 
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)
