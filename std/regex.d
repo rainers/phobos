@@ -116,7 +116,8 @@ import std.range;
 import std.conv;
 import std.functional;
 
-version(unittest) import std.stdio;
+import std.stdio;
+
 unittest
 {
     auto r = regex("abc"w);
