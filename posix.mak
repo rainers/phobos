@@ -182,8 +182,8 @@ EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
 EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
 EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
-		winsock) $(addprefix std/windows/, charset iunknown syserror)	\
-		$(addprefix std/, __fileinit)
+		winsock) $(addprefix std/windows/, charset iunknown syserror registry)	\
+		$(addprefix std/, __fileinit) $(addprefix std/internal/windows/, advapi32)
 ifeq (,$(findstring win,$(OS)))
 	EXTRA_DOCUMENTABLES:=$(EXTRA_MODULES_LINUX)
 else
@@ -344,6 +344,9 @@ $(DOC_OUTPUT_DIR)/std_c_windows_%.html : std/c/windows/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_windows_%.html : std/windows/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS) -Df$@ $<
+
+$(DOC_OUTPUT_DIR)/std_internal_windows_%.html : std/internal/windows/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
