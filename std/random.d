@@ -1128,7 +1128,7 @@ Example:
 ----
 auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
 auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
-auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 30% of the time,
+auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 20% of the time,
                            // and 2 10% of the time
 ----
 */
@@ -1318,7 +1318,7 @@ foreach (e; randomSample(n, 5))
 }
 ----
  */
-struct RandomSample(R, Random)
+struct RandomSample(R, Random = void)
 {
     private size_t _available, _toSelect;
     private R _input;
@@ -1342,7 +1342,7 @@ Constructor.
             this(input, howMany, input.length);
         }
 
-    private this(R input, size_t howMany, size_t total)
+    this(R input, size_t howMany, size_t total)
     {
         _input = input;
         _available = total;
@@ -1478,3 +1478,4 @@ unittest
     }
     assert(i == 5);
 }
+
