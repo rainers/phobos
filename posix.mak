@@ -122,7 +122,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -m$(MODEL)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -260,6 +260,12 @@ endif
 
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(MAKEFILE)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+
+ifeq (osx,$(OS))
+# Build fat library that combines the 32 bit and the 64 bit libraries
+libphobos2.a : generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a
+	lipo generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a -create -output generated/osx/release/libphobos2.a
+endif
 
 ifeq ($(MODEL),64)
 DISABLED_TESTS += std/format

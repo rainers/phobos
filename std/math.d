@@ -1739,14 +1739,27 @@ real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
  * be completely subtracted from x. The result has the same sign as x.
  *
  * $(TABLE_SV
- *  $(TR $(TH x)              $(TH y)             $(TH modf(x, y))   $(TH invalid?))
+ *  $(TR $(TH x)              $(TH y)             $(TH fmod(x, y))   $(TH invalid?))
  *  $(TR $(TD $(PLUSMN)0.0)   $(TD not 0.0)       $(TD $(PLUSMN)0.0) $(TD no))
  *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(NAN))       $(TD yes))
  *  $(TR $(TD anything)       $(TD $(PLUSMN)0.0)  $(TD $(NAN))       $(TD yes))
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real modf(real x, ref real y) @trusted nothrow { return core.stdc.math.modfl(x,&y); }
+real fmod(real x, real y) @trusted nothrow { return core.stdc.math.fmodl(x, y); }
+
+/************************************
+ * Breaks x into an integral part and a fractional part, each of which has
+ * the same sign as x. The integral part is stored in i.
+ * Returns:
+ * The fractional part of x.
+ *
+ * $(TABLE_SV
+ *  $(TR $(TH x)              $(TH i (on input))  $(TH modf(x, i))   $(TH i (on return)))
+ *  $(TR $(TD $(PLUSMNINF))   $(TD anything)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMNINF)))
+ * )
+ */
+real modf(real x, ref real i) @trusted nothrow { return core.stdc.math.modfl(x,&i); }
 
 /*************************************
  * Efficiently calculates x * 2$(SUP n).
@@ -2172,7 +2185,7 @@ public:
 
 
 /// Set all of the floating-point status flags to false.
-void resetIeeeFlags() { IeeeFlags.resetIeeeFlags; }
+void resetIeeeFlags() { IeeeFlags.resetIeeeFlags(); }
 
 /// Return a snapshot of the current state of the floating-point status flags.
 @property IeeeFlags ieeeFlags()
@@ -3895,7 +3908,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
         static if (isInputRange!U)
         {
             // Two ranges
-            for (;; lhs.popFront, rhs.popFront)
+            for (;; lhs.popFront(), rhs.popFront())
             {
                 if (lhs.empty) return rhs.empty;
                 if (rhs.empty) return lhs.empty;
@@ -3906,7 +3919,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
         else
         {
             // lhs is range, rhs is number
-            for (; !lhs.empty; lhs.popFront)
+            for (; !lhs.empty; lhs.popFront())
             {
                 if (!approxEqual(lhs.front, rhs, maxRelDiff, maxAbsDiff))
                     return false;
