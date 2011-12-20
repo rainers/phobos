@@ -167,7 +167,7 @@ MAIN = $(ROOT)/emptymain.d
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         bitmanip compiler complex concurrency container contracts conv	\
-        cpuid cstream ctype date datetime datebase dateparse demangle	\
+        cpuid cstream ctype csv date datetime datebase dateparse demangle	\
         encoding exception file format functional getopt gregorian		\
         json loader math mathspecial md5 metastrings mmfile numeric		\
         outbuffer parallelism path perf process random range regex		\
@@ -191,7 +191,7 @@ else
 endif
 
 # Other D modules that aren't under std/
-EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl zlib) $(addprefix		\
+EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl sqlite3 zlib) $(addprefix	\
 std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
 time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
