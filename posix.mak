@@ -267,13 +267,6 @@ libphobos2.a : generated/osx/release/32/libphobos2.a generated/osx/release/64/li
 	lipo generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a -create -output generated/osx/release/libphobos2.a
 endif
 
-ifeq ($(MODEL),64)
-DISABLED_TESTS += std/format
-# Still not passing, time to pull out the next issue.
-
-DISABLED_TESTS += std/math
-# seems to infinite loop, need to reduce
-
 endif
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
