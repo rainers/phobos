@@ -267,8 +267,6 @@ libphobos2.a : generated/osx/release/32/libphobos2.a generated/osx/release/64/li
 	lipo generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a -create -output generated/osx/release/libphobos2.a
 endif
 
-endif
-
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
