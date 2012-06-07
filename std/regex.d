@@ -695,7 +695,7 @@ Trie[const(CodepointSet)] trieCache;
             return *p;
         if(trieCache.length == maxCachedTries)
         {
-            trieCache.clear();
+            // flush entries in trieCache
             trieCache = null;
         }
         return (trieCache[set] = Trie(set));
@@ -6545,8 +6545,8 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     Construct a new string from $(D input) by replacing each match with
     a string generated from match according to $(D format) specifier.
 
-    To replace all occurances use regex with "g" flag, otherwise
-    only first occurrence gets replaced.
+    To replace all occurrences use regex with "g" flag, otherwise
+    only the first occurrence gets replaced.
 
     Params:
     input = string to search
@@ -6557,7 +6557,7 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
     ---
     //Comify a number
     auto com = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
-    assert(replace("12000 + 42100 = 56000", com, ",") == "12,000 + 42,100 = 56,100");
+    assert(replace("12000 + 42100 = 54100", com, ",") == "12,000 + 42,100 = 54,100");
     ---
 
     The format string can reference parts of match using the following notation.

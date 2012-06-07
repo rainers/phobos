@@ -13,7 +13,9 @@
  *            Tomasz Stachowiak ($(D isExpressionTuple)),
  *            $(WEB erdani.org, Andrei Alexandrescu),
  *            Shin Fujishiro,
- *            $(WEB octarineparrot.com, Robert Clipsham)
+ *            $(WEB octarineparrot.com, Robert Clipsham),
+ *            $(WEB klickverbot.at, David Nadlinger),
+ *            Kenji Hara
  * Source:    $(PHOBOSSRC std/_traits.d)
  */
 /*          Copyright Digital Mars 2005 - 2009.
@@ -889,6 +891,156 @@ unittest
     static assert(is(F_dglit* : int function(int)));
 }
 
+/**
+ * Constructs a new function or delegate type with the same basic signature
+ * as the given one, but different attributes (including linkage).
+ *
+ * This is especially useful for adding/removing attributes from/to types in
+ * generic code, where the actual type name cannot be spelt out.
+ *
+ * Params:
+ *    T = The base type.
+ *    linkage = The desired linkage of the result type.
+ *    attrs = The desired $(LREF FunctionAttribute)s of the result type.
+ *
+ * Examples:
+ * ---
+ * template ExternC(T)
+ *     if (isFunctionPointer!T || isDelegate!T || is(T == function))
+ * {
+ *     alias SetFunctionAttributes!(T, "C", functionAttributes!T) ExternC;
+ * }
+ * ---
+ *
+ * ---
+ * auto assumePure(T)(T t)
+ *     if (isFunctionPointer!T || isDelegate!T)
+ * {
+ *     enum attrs = functionAttributes!T | FunctionAttribute.pure_;
+ *     return cast(SetFunctionAttributes!(T, functionLinkage!T, attrs)) t;
+ * }
+ * ---
+ */
+template SetFunctionAttributes(T, string linkage, uint attrs)
+    if (isFunctionPointer!T || isDelegate!T)
+{
+    mixin({
+        static assert(!(attrs & FunctionAttribute.trusted) ||
+            !(attrs & FunctionAttribute.safe),
+            "Cannot have a function/delegate that is both trusted and safe.");
+
+        enum linkages = ["D", "C", "Windows", "Pascal", "C++", "System"];
+        static assert(canFind(linkages, linkage), "Invalid linkage '" ~
+            linkage ~ "', must be one of " ~ linkages.stringof ~ ".");
+
+        string result = "alias ";
+
+        static if (linkage != "D")
+            result ~= "extern(" ~ linkage ~ ") ";
+
+        static if (attrs & FunctionAttribute.ref_)
+            result ~= "ref ";
+
+        result ~= "ReturnType!T";
+
+        static if (isDelegate!T)
+            result ~= " delegate";
+        else
+            result ~= " function";
+
+        result ~= "(";
+
+        static if (ParameterTypeTuple!T.length > 0)
+            result ~= "ParameterTypeTuple!T";
+
+        enum varStyle = variadicFunctionStyle!T;
+        static if (varStyle == Variadic.c)
+            result ~= ", ...";
+        else static if (varStyle == Variadic.d)
+            result ~= "...";
+        else static if (varStyle == Variadic.typesafe)
+            result ~= "...";
+
+        result ~= ")";
+
+        static if (attrs & FunctionAttribute.pure_)
+            result ~= " pure";
+        static if (attrs & FunctionAttribute.nothrow_)
+            result ~= " nothrow";
+        static if (attrs & FunctionAttribute.property)
+            result ~= " @property";
+        static if (attrs & FunctionAttribute.trusted)
+            result ~= " @trusted";
+        static if (attrs & FunctionAttribute.safe)
+            result ~= " @safe";
+
+        result ~= " SetFunctionAttributes;";
+        return result;
+    }());
+}
+
+/// Ditto
+template SetFunctionAttributes(T, string linkage, uint attrs)
+    if (is(T == function))
+{
+    // To avoid a lot of syntactic headaches, we just use the above version to
+    // operate on the corresponding function pointer type and then remove the
+    // indirection again.
+    alias FunctionTypeOf!(SetFunctionAttributes!(T*, linkage, attrs))
+        SetFunctionAttributes;
+}
+
+version (unittest)
+{
+    // Some function types to test.
+    int sc(scope int, ref int, out int, lazy int, int);
+    extern(System) int novar();
+    extern(C) int cstyle(int, ...);
+    extern(D) int dstyle(...);
+    extern(D) int typesafe(int[]...);
+}
+unittest
+{
+    alias FunctionAttribute FA;
+    foreach (BaseT; TypeTuple!(typeof(&sc), typeof(&novar), typeof(&cstyle),
+        typeof(&dstyle), typeof(&typesafe)))
+    {
+        foreach (T; TypeTuple!(BaseT, FunctionTypeOf!BaseT))
+        {
+            enum linkage = functionLinkage!T;
+            enum attrs = functionAttributes!T;
+
+            static assert(is(SetFunctionAttributes!(T, linkage, attrs) == T),
+                "Identity check failed for: " ~ T.stringof);
+
+            // Check that all linkage types work (D-style variadics require D linkage).
+            static if (variadicFunctionStyle!T != Variadic.d)
+            {
+                foreach (newLinkage; TypeTuple!("D", "C", "Windows", "Pascal", "C++"))
+                {
+                    alias SetFunctionAttributes!(T, newLinkage, attrs) New;
+                    static assert(functionLinkage!New == newLinkage,
+                        "Linkage test failed for: " ~ T.stringof ~ ", " ~ newLinkage ~
+                        " (got " ~ New.stringof ~ ")");
+                }
+            }
+
+            // Add @safe.
+            alias SetFunctionAttributes!(T, functionLinkage!T, FA.safe) T1;
+            static assert(functionAttributes!T1 == FA.safe);
+
+            // Add all known attributes, excluding conflicting ones.
+            enum allAttrs = reduce!"a | b"([EnumMembers!FA]) & ~FA.safe & ~FA.property;
+            alias SetFunctionAttributes!(T1, functionLinkage!T, allAttrs) T2;
+            static assert(functionAttributes!T2 == allAttrs);
+
+            // Strip all attributes again.
+            alias SetFunctionAttributes!(T2, functionLinkage!T, FA.none) T3;
+            static assert(is(T3 == T));
+        }
+    }
+}
+
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Aggregate Types
@@ -1475,8 +1627,11 @@ template hasIndirections(T)
         }
         else static if(isStaticArray!(T[0]))
         {
-            enum Impl = Impl!(T[1 .. $]) ||
-                Impl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
+            static if (is(T[0] _ : void[N], size_t N))
+                enum Impl = true;
+            else
+                enum Impl = Impl!(T[1 .. $]) ||
+                    Impl!(RepresentationTypeTuple!(typeof(T[0].init[0])));
         }
         else
         {
@@ -1508,6 +1663,9 @@ unittest
     static assert(!hasIndirections!(void function()));
     static assert( hasIndirections!(void*[1]));
     static assert(!hasIndirections!(byte[1]));
+
+    // void static array hides actual type of bits, so "may have indirections".
+    static assert( hasIndirections!(void[1]));
 }
 
 // These are for backwards compatibility, are intentionally lacking ddoc,
@@ -1680,14 +1838,18 @@ unittest
  */
 template hasElaborateDestructor(S)
 {
-    static if(!is(S == struct))
+    static if(isStaticArray!S && S.length)
     {
-        enum bool hasElaborateDestructor = false;
+        enum bool hasElaborateDestructor = hasElaborateDestructor!(typeof(S[0]));
+    }
+    else static if(is(S == struct))
+    {
+        enum hasElaborateDestructor = hasMember!(S, "__dtor")
+            || anySatisfy!(.hasElaborateDestructor, typeof(S.tupleof));
     }
     else
     {
-        enum hasElaborateDestructor = is(typeof({S s; return &s.__dtor;}))
-            || anySatisfy!(.hasElaborateDestructor, typeof(S.tupleof));
+        enum bool hasElaborateDestructor = false;
     }
 }
 
@@ -1698,9 +1860,17 @@ unittest
     static struct S1 { }
     static struct S2 { ~this() {} }
     static struct S3 { S2 field; }
+    static struct S4 { S3[1] field; }
+    static struct S5 { S3[] field; }
+    static struct S6 { S3[0] field; }
     static assert(!hasElaborateDestructor!S1);
     static assert( hasElaborateDestructor!S2);
     static assert( hasElaborateDestructor!S3);
+    static assert( hasElaborateDestructor!(S3[1]));
+    static assert(!hasElaborateDestructor!(S3[0]));
+    static assert( hasElaborateDestructor!S4);
+    static assert(!hasElaborateDestructor!S5);
+    static assert(!hasElaborateDestructor!S6);
 }
 
 /**
@@ -2688,7 +2858,7 @@ unittest
 
 /*
  */
-template BooleanTypeOf(T)
+template BooleanTypeOf(T) if (!is(T == enum))
 {
            inout(bool) idx(        inout(bool) );
     shared(inout bool) idx( shared(inout bool) );
@@ -2722,7 +2892,7 @@ unittest
 
 /*
  */
-template IntegralTypeOf(T)
+template IntegralTypeOf(T) if (!is(T == enum))
 {
            inout(  byte) idx(        inout(  byte) );
            inout( ubyte) idx(        inout( ubyte) );
@@ -2781,7 +2951,7 @@ unittest
 
 /*
  */
-template FloatingPointTypeOf(T)
+template FloatingPointTypeOf(T) if (!is(T == enum))
 {
            inout( float) idx(        inout( float) );
            inout(double) idx(        inout(double) );
@@ -2820,7 +2990,7 @@ unittest
 
 /*
  */
-template NumericTypeOf(T)
+template NumericTypeOf(T) if (!is(T == enum))
 {
     static if (is(IntegralTypeOf!T X))
         alias X NumericTypeOf;
@@ -2848,7 +3018,7 @@ unittest
 
 /*
  */
-template UnsignedTypeOf(T)
+template UnsignedTypeOf(T) if (!is(T == enum))
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, UnsignedIntTypeList) >= 0)
@@ -2857,7 +3027,7 @@ template UnsignedTypeOf(T)
         static assert(0, T.stringof~" is not an unsigned type.");
 }
 
-template SignedTypeOf(T)
+template SignedTypeOf(T) if (!is(T == enum))
 {
     static if (is(IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, SignedIntTypeList) >= 0)
@@ -2870,7 +3040,7 @@ template SignedTypeOf(T)
 
 /*
  */
-template CharTypeOf(T)
+template CharTypeOf(T) if (!is(T == enum))
 {
            inout( char) idx(        inout( char) );
            inout(wchar) idx(        inout(wchar) );
@@ -2925,7 +3095,7 @@ unittest
 
 /*
  */
-template StaticArrayTypeOf(T)
+template StaticArrayTypeOf(T) if (!is(T == enum))
 {
     inout(U[n]) idx(U, size_t n)( inout(U[n]) );
 
@@ -2956,7 +3126,7 @@ unittest
 
 /*
  */
-template DynamicArrayTypeOf(T)
+template DynamicArrayTypeOf(T) if (!is(T == enum))
 {
     inout(U[]) idx(U)( inout(U[]) );
 
@@ -2996,7 +3166,7 @@ unittest
 
 /*
  */
-template ArrayTypeOf(T)
+template ArrayTypeOf(T) if (!is(T == enum))
 {
     static if (is(StaticArrayTypeOf!T X))
         alias X ArrayTypeOf;
@@ -3012,7 +3182,7 @@ unittest
 
 /*
  */
-template StringTypeOf(T) if (isSomeString!T)
+template StringTypeOf(T) if (!is(T == enum) && isSomeString!T)
 {
     alias ArrayTypeOf!T StringTypeOf;
 }
@@ -3042,7 +3212,7 @@ unittest
 
 /*
  */
-template AssocArrayTypeOf(T)
+template AssocArrayTypeOf(T) if (!is(T == enum))
 {
        immutable(V [K]) idx(K, V)(    immutable(V [K]) );
 
@@ -3231,6 +3401,40 @@ template isNumeric(T)
 }
 
 /**
+Detect whether T is a scalar type.
+ */
+template isScalarType(T)
+{
+    enum bool isScalarType = isNumeric!T || isSomeChar!T || isBoolean!T;
+}
+
+unittest
+{
+    static assert(!isScalarType!void);
+    static assert( isScalarType!(immutable(int)));
+    static assert( isScalarType!(shared(float)));
+    static assert( isScalarType!(shared(const bool)));
+    static assert( isScalarType!(const(dchar)));
+}
+
+/**
+Detect whether T is a basic type.
+ */
+template isBasicType(T)
+{
+    enum bool isBasicType = isScalarType!T || is(T == void);
+}
+
+unittest
+{
+    static assert(isBasicType!void);
+    static assert(isBasicType!(immutable(int)));
+    static assert(isBasicType!(shared(float)));
+    static assert(isBasicType!(shared(const bool)));
+    static assert(isBasicType!(const(dchar)));
+}
+
+/**
 Detect whether $(D T) is a built-in unsigned numeric type.
  */
 template isUnsigned(T)
@@ -3274,7 +3478,19 @@ Detect whether we can treat T as one of the built-in string types.
  */
 template isSomeString(T)
 {
-    enum isSomeString = isNarrowString!T || is(T : const(dchar[]));
+    static if (is(T == enum))
+    {
+        enum isSomeString = false;
+    }
+    else static if (is(T == typeof(null)))
+    {
+        // It is impossible to determine exact string type from typeof(null) -
+        // it means that StringTypeOf!(typeof(null)) is undefined.
+        // Then this behavior is convenient for template constraint.
+        enum isSomeString = false;
+    }
+    else
+        enum isSomeString = isNarrowString!T || is(T : const(dchar[]));
 }
 
 unittest
@@ -3289,6 +3505,7 @@ unittest
     static assert(!isSomeString!(int));
     static assert(!isSomeString!(int[]));
     static assert(!isSomeString!(byte[]));
+    static assert(!isSomeString!(typeof(null)));
 }
 
 template isNarrowString(T)
@@ -3360,6 +3577,7 @@ unittest
 {
     static assert( isDynamicArray!(int[]));
     static assert(!isDynamicArray!(int[5]));
+    static assert(!isDynamicArray!(typeof(null)));
 }
 
 /**
@@ -3378,6 +3596,7 @@ unittest
 
     static assert(!isArray!(uint));
     static assert(!isArray!(uint[uint]));
+    static assert(!isArray!(typeof(null)));
 }
 
 /**
@@ -3403,6 +3622,7 @@ unittest
     static assert(!isAssociativeArray!(Foo));
     static assert(!isAssociativeArray!(int));
     static assert(!isAssociativeArray!(int[]));
+    static assert(!isAssociativeArray!(typeof(null)));
 }
 
 template isBuiltinType(T)
@@ -3433,6 +3653,7 @@ unittest
     static assert(!isPointer!(uint));
     static assert(!isPointer!(uint[uint]));
     static assert(!isPointer!(char[]));
+    static assert(!isPointer!(typeof(null)));
 }
 
 /**
@@ -3452,6 +3673,15 @@ unittest
     static assert( is(PointerTarget!(long*) == long));
 
     static assert(!is(PointerTarget!int));
+}
+
+/**
+ * Detect whether type $(D T) is an aggregate type.
+ */
+template isAggregateType(T)
+{
+    enum isAggregateType = is(T == struct) || is(T == union) ||
+                           is(T == class) || is(T == interface);
 }
 
 /**
