@@ -1146,7 +1146,7 @@ class Tag
             {
                 string s = "<" ~ name;
                 foreach(key,val;attr)
-                    s ~= format(" %s=\"%s\"",key,decode(val,DecodeMode.LOOSE));
+                    s ~= format(" %s=\"%s\"",key,encode(val));
                 return s;
             }
 
