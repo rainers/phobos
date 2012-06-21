@@ -345,6 +345,9 @@ $(DOC_OUTPUT_DIR)/std_internal_windows_%.html : std/internal/windows/%.d $(STDDO
 $(DOC_OUTPUT_DIR)/std_net_%.html : std/net/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
+$(DOC_OUTPUT_DIR)/std_hash_%.html : std/hash/%.d $(STDDOC)
+	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
+
 $(DOC_OUTPUT_DIR)/etc_c_%.html : etc/c/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS)  $(STDDOC) -Df$@ $<
 
