@@ -1,15 +1,19 @@
 $(VERSION 060, ddd mm, 2012, =================================================,
 
     $(WHATSNEW
+        $(LI std.bitmanip: Added peek, read, write, and append for converting
+             ranges of bytes to and from integral types.)
         $(LI Added std.file.tempDir which returns the path to a directory
              where a program can put temporary files.)
         $(LI std.process: Added escapeShellCommand, escapeShellFileName, and
              escapeWindowsArgument. Documented browse function.)
+        $(LI std.range: Added RefRange, which effectively makes it possible to
+             pass a range by reference.)
         $(LI std.string: Added xformat and xsformat, they are compatible with writef.)
-        $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
-             scheduled for deprecation.)
         $(LI std.traits: Added KeyType, ValueType, isScalarType, isBasicType, and
              SetFunctionAttributes templates.)
+        $(LI Capitalized std.traits.pointerTarget to PointerTarget. Old one is
+             scheduled for deprecation.)
         $(LI The overloads of std.conv.to which were scheduled for deprecation
              because formattedWrite replaced them have now been deprecated.
              Please use std.format.formattedWrite instead.)
@@ -42,6 +46,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 6926): std.process.system return wrong exit code)
         $(LI $(BUGZILLA 7022): File.byLine doesn't release file handle)
         $(LI $(BUGZILLA 7348): to!string(null) matches more than one template declaration)
+        $(LI $(BUGZILLA 7515): The new std.string.translate is slow for ASCII text)
         $(LI $(BUGZILLA 7660): toImpl conflict in std.conv)
         $(LI $(BUGZILLA 7796): std.typecons.Unique is using writeln without importing std.stdio.)
         $(LI $(BUGZILLA 7824): isInputRange fails to recognize inout(T)[])
@@ -49,6 +54,7 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 7898): [CTFE] std.algorithm:copy fails when used with two arrays)
         $(LI $(BUGZILLA 7909): to!enum(string) and to!string(enum) break when enum is integral)
         $(LI $(BUGZILLA 7919): Sample code works on GDC but fails with DMD)
+        $(LI $(BUGZILLA 7937): Range iota.Result should be const where possible)
         $(LI $(BUGZILLA 7944): std.range.iota.popFront() cycles when the range is empty)
         $(LI $(BUGZILLA 7962): std.regex: Captures.length() returns incorrect value)
         $(LI $(BUGZILLA 7975): Incorrect quotes escaping in std.format)
@@ -62,14 +68,20 @@ $(VERSION 060, ddd mm, 2012, =================================================,
         $(LI $(BUGZILLA 8055): [Regression 2.059] std.algorithm.move corrupts moved object field)
         $(LI $(BUGZILLA 8057): std.algorithm.move cannot use for nested struct)
         $(LI $(BUGZILLA 8080): 'alias this' causes toString to be shadowed by aliased object)
+        $(LI $(BUGZILLA 8187): replaceFirst doesn't work for string[] haystack)
         $(LI $(BUGZILLA 8112): std.algorithm.fill must accept InputRange)
         $(LI $(BUGZILLA 8171): Broken std.algorithm.move for nested struct has no member)
+        $(LI $(BUGZILLA 8195): Segfault when comparing a VariantN to a non-variant type which it holds)
+        $(LI $(BUGZILLA 8203): Use of std.regex.match() generates "not enough preallocated memory" error)
+        $(LI $(BUGZILLA 8233): std.array.array fails to compile with ranges of immutable elements which have a length property)
+        $(LI $(BUGZILLA 8240): std.algorithm.joiner and empty inputRangeObject)
+        $(LI $(BUGZILLA 8264): [std.conv.to] constructing conversion doesn't work with alias this)
      )
  )
 
 $(VERSION 059, ddd mm, 2012, =================================================,
     $(WHATSNEW
-        $(LI std.array: replaceInto, an alternative for replace that outputs result directly 
+        $(LI std.array: replaceInto, an alternative for replace that outputs result directly
         to an output range, avoiding extra allocation.)
         $(LI The deprecated std.date, std.dateparse, and std.gregorian modules
              have been removed. Please use std.datetime instead.)

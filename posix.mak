@@ -123,7 +123,7 @@ DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
-	DFLAGS += -g -O -release -nofloat
+	DFLAGS += -O -release -g
 endif
 
 # Set DOTOBJ and DOTEXE
