@@ -3416,7 +3416,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
                 {
                     if (ranges[i].empty) return true;
                 }
-                break;
+                return false;
             case StoppingPolicy.longest:
                 foreach (i, Unused; R)
                 {
@@ -3430,9 +3430,9 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
                             ranges.field[i + 1].empty,
                             "Inequal-length ranges passed to Zip");
                 }
-                break;
+                return ranges[0].empty;
             }
-            return false;
+            assert(false);
         }
     }
 
@@ -3629,7 +3629,7 @@ if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R)
                 {
-                    enforce(!ranges[0].empty, "Invalid Zip object");
+                    enforce(!ranges[i].empty, "Invalid Zip object");
                     ranges[i].popBack();
                 }
                 break;
@@ -3764,7 +3764,7 @@ enum StoppingPolicy
 unittest
 {
     int[] a = [ 1, 2, 3 ];
-    float[] b = [ 1., 2, 3 ];
+    float[] b = [ 1.0, 2.0, 3.0 ];
     foreach (e; zip(a, b))
     {
         assert(e[0] == e[1]);
@@ -3775,7 +3775,22 @@ unittest
     //swap(z.front(), z.back());
     sort!("a[0] < b[0]")(zip(a, b));
     assert(a == [1, 2, 3]);
-    assert(b == [2., 1, 3]);
+    assert(b == [2.0, 1.0, 3.0]);
+
+    z = zip(StoppingPolicy.requireSameLength, a, b);
+    assertNotThrown((z.popBack(), z.popBack(), z.popBack()));
+    assert(z.empty);
+    assertThrown(z.popBack());
+
+    a = [ 1, 2, 3 ];
+    b = [ 1.0, 2.0, 3.0 ];
+    sort!("a[0] > b[0]")(zip(StoppingPolicy.requireSameLength, a, b));
+    assert(a == [3, 2, 1]);
+    assert(b == [3.0, 2.0, 1.0]);
+
+    a = [];
+    b = [];
+    assert(zip(StoppingPolicy.requireSameLength, a, b).empty);
 
     // Test infiniteness propagation.
     static assert(isInfinite!(typeof(zip(repeat(1), repeat(1)))));
@@ -7168,7 +7183,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++ +/
         @property auto front() {assert(0);}
@@ -7196,7 +7211,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         @property bool empty(); ///
         @property bool empty() const; ///Ditto
@@ -7224,7 +7239,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++ +/
         @property auto save() {assert(0);}
@@ -7291,7 +7306,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             Only defined if $(D isBidirectionalRange!R) is $(D true).
@@ -7328,7 +7343,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             Only defined if $(D isRandomAccesRange!R) is $(D true).
@@ -7385,7 +7400,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             Only defined if $(D hasLength!R) is $(D true).
@@ -7409,7 +7424,7 @@ assert(buffer2 == [11, 12, 13, 14, 15]);
     }
 
 
-    version(D_Ddoc)
+    version(StdDdoc)
     {
         /++
             Only defined if $(D hasSlicing!R) is $(D true).

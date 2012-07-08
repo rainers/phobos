@@ -1668,10 +1668,22 @@ unittest
 /**
    Static-size arrays are formatted as dynamic arrays.
  */
-void formatValue(Writer, T, Char)(Writer w, ref T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, auto ref T obj, ref FormatSpec!Char f)
 if (!hasToString!(T, Char) && isStaticArray!T)
 {
     formatValue(w, obj[], f);
+}
+
+unittest    // Test for issue 8310
+{
+    FormatSpec!char f;
+    auto w = appender!string();
+
+    char[2] two = ['a', 'b'];
+    formatValue(w, two, f);
+
+    char[2] getTwo(){ return two; }
+    formatValue(w, getTwo(), f);
 }
 
 /**
@@ -4667,29 +4679,30 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 if (comma) putc(',');
                 comma = true;
                 void *pkey = &fakevalue;
-                version (X86)
-                    pkey -= long.sizeof;
-                else version(X86_64)
-                    pkey -= 16;
-                else static assert(false, "unsupported platform");
+                version (D_LP64)
+                    pkey -= (long.sizeof + 15) & ~(15);
+                else
+                    pkey -= (long.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
 
                 // the key comes before the value
                 auto keysize = keyti.tsize;
-                version (X86)
-                    auto keysizet = (keysize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
-                else
+                version (D_LP64)
                     auto keysizet = (keysize + 15) & ~(15);
+                else
+                    auto keysizet = (keysize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
 
                 void* pvalue = pkey + keysizet;
 
                 //doFormat(putc, (&keyti)[0..1], pkey);
                 version (X86)
                     argptr = pkey;
-                else
+                else version (X86_64)
                 {   __va_list va;
                     va.stack_args = pkey;
                     argptr = &va;
                 }
+                else static assert(false, "unsupported platform");
+
                 ti = keyti;
                 m = getMan(keyti);
                 formatArg('s');
@@ -4698,11 +4711,12 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 //doFormat(putc, (&valti)[0..1], pvalue);
                 version (X86)
                     argptr = pvalue;
-                else
+                else version (X86_64)
                 {   __va_list va2;
                     va2.stack_args = pvalue;
                     argptr = &va2;
                 }
+                else static assert(false, "unsupported platform");
 
                 ti = valti;
                 m = getMan(valti);

@@ -58,7 +58,7 @@ DOCSRC = ../d-programming-language.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
-SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_HASH_MODULES) $(EXTRA_DOCUMENTABLES))
+SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
@@ -169,11 +169,9 @@ STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         metastrings mmfile numeric outbuffer parallelism path perf		\
         process random range regex regexp signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
-        typecons typetuple uni uri utf variant xml zip zlib)
+        typecons typetuple uni uri utf uuid variant xml zip zlib)
 
 STD_NET_MODULES = $(addprefix std/net/, isemail curl)
-
-STD_HASH_MODULES = $(addprefix std/hash/, crc32)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -199,7 +197,7 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	processinit uni uni_tab)
 
 # Aggregate all D modules relevant to this build
-D_MODULES = $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_HASH_MODULES)
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
