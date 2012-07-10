@@ -786,7 +786,7 @@ by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
 with every line.  */
     S readln(S = string)(dchar terminator = '\n')
     {
-        Unqual!(typeof(S.init[0]))[] buf;
+        Unqual!(ElementEncodingType!S)[] buf;
         readln(buf, terminator);
         return assumeUnique(buf);
     }
@@ -1527,7 +1527,8 @@ unittest
 }
 
 /**
- * $(RED Scheduled for deprecation. Please use $(D isFileHandle) instead.)
+ * $(RED Scheduled for deprecation in January 2013.
+ *       Please use $(D isFileHandle) instead.)
  */
 alias isFileHandle isStreamingDevice;
 
@@ -2261,7 +2262,7 @@ class StdioException : Exception
 
 /**
 Initialize with a message and an error code. */
-    this(string message, uint e = .getErrno())
+    this(string message, uint e = .errno)
     {
         errno = e;
         version (Posix)
@@ -2294,7 +2295,7 @@ Initialize with a message and an error code. */
 /// ditto
     static void opCall()
     {
-        throw new StdioException(null, .getErrno());
+        throw new StdioException(null, .errno);
     }
 }
 
