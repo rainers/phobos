@@ -32068,7 +32068,7 @@ version(StdDdoc)
 
         When the value that is returned by this function is destroyed,
         $(D func) will run. $(D func) is a unary function that takes a
-        $(CXREF TickDuration).
+        $(CXREF time, TickDuration).
 
         Examples:
 --------------------
@@ -33891,7 +33891,7 @@ template _isPrintable(T...)
     else static if(T.length == 1)
     {
         enum _isPrintable = (!isArray!(T[0]) && __traits(compiles, to!string(T[0].init))) ||
-                           __traits(compiles, to!string(ArrayTarget!(T[0]).init));
+                           (isArray!(T[0]) && __traits(compiles, to!string(T[0].init[0])));
     }
     else
     {

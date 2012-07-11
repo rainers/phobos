@@ -120,7 +120,7 @@ unittest
     {
         int x;
         this(int y) { x = y; }
-        override string toString() { return .to!string(x); }
+        override string toString() const { return .to!string(x); }
     }
     auto c = array([new C(1), new C(2)][]);
     //writeln(c);
@@ -186,7 +186,7 @@ private template nDimensions(T)
 {
     static if(isArray!T)
     {
-        enum nDimensions = 1 + nDimensions!(ArrayTarget!T);
+        enum nDimensions = 1 + nDimensions!(typeof(T.init[0]));
     }
     else
     {
@@ -266,7 +266,7 @@ if(allSatisfy!(isIntegral, I))
         to!string(sizes.length) ~ " dimensions specified for a " ~
         to!string(nDimensions!T) ~ " dimensional array.");
 
-    alias ArrayTarget!T E;
+    alias typeof(T.init[0]) E;
 
     auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!(E));
     auto ret = ptr[0..sizes[0]];
