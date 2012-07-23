@@ -777,7 +777,7 @@ unittest
     assert(r1 == 107);
 
     // two funs
-    auto r2 = reduce!("a + b", "a - b")(tuple(0., 0.), a);
+    auto r2 = reduce!("a + b", "a - b")(tuple(0.0, 0.0), a);
     assert(r2[0] == 7 && r2[1] == -7);
     auto r3 = reduce!("a + b", "a - b")(a);
     assert(r3[0] == 7 && r3[1] == -1);
@@ -4891,7 +4891,7 @@ assert(!equal(a, a[1..$]));
 assert(equal(a, a));
 
 // different types
-double[] b = [ 1., 2, 4, 3];
+double[] b = [ 1.0, 2, 4, 3];
 assert(!equal(a, b[1..$]));
 assert(equal(a, b));
 
@@ -4920,7 +4920,7 @@ unittest
     assert(!equal(a, a[1..$]));
     assert(equal(a, a));
     // test with different types
-    double[] b = [ 1., 2, 4, 3];
+    double[] b = [ 1.0, 2, 4, 3];
     assert(!equal(a, b[1..$]));
     assert(equal(a, b));
 
@@ -5339,7 +5339,7 @@ sgi.com/tech/stl/_mismatch.html, STL's _mismatch).
 Example:
 ----
 int[]    x = [ 1,  5, 2, 7,   4, 3 ];
-double[] y = [ 1., 5, 2, 7.3, 4, 8 ];
+double[] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
 auto m = mismatch(x, y);
 assert(m[0] == x[3 .. $]);
 assert(m[1] == y[3 .. $]);
@@ -5363,7 +5363,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // doc example
     int[]    x = [ 1,  5, 2, 7,   4, 3 ];
-    double[] y = [ 1., 5, 2, 7.3, 4, 8 ];
+    double[] y = [ 1.0, 5, 2, 7.3, 4, 8 ];
     auto m = mismatch(x, y);
     assert(m[0] == [ 7, 4, 3 ]);
     assert(m[1] == [ 7.3, 4, 8 ]);
@@ -5658,8 +5658,6 @@ if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 
         return target;
     }
-    if (__ctfe)
-        return genericImpl(source, target);
 
     static if (isArray!Range1 && isArray!Range2 &&
                is(Unqual!(typeof(source[0])) == Unqual!(typeof(target[0]))))
@@ -8740,7 +8738,7 @@ version(unittest)
         double[] result;
         foreach (i; rndstuff!(int)())
         {
-            result ~= i / 50.;
+            result ~= i / 50.0;
         }
         return result;
     }
@@ -8976,7 +8974,7 @@ unittest
     largestPartialIntersection(a, b, SortOutput.yes);
     //sort(b);
     //writeln(b);
-    assert(b == [ tuple(7., 4u), tuple(1., 3u) ][], text(b));
+    assert(b == [ tuple(7.0, 4u), tuple(1.0, 3u) ][], text(b));
     assert(a[0].empty);
 }
 
