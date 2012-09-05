@@ -134,7 +134,7 @@ ifeq (,$(findstring win,$(OS)))
 else
 	DOTOBJ:=.obj
 	DOTEXE:=.exe
-	PATHSEP:=$(subst /,\,/)
+	PATHSEP:=$(subst /,\\,/)
 endif
 
 # Set LINKOPTS
@@ -279,7 +279,7 @@ ifeq (,$(findstring win,$(OS)))
 # succeeded, render the file new again
 #	@touch $@
 else
-	@$(subst /,$(PATHSEP),$(DMD) $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
+	@$(DMD) $(subst /,$(PATHSEP), $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
 	 	$(ROOT)/emptymain.d $< ) || $(RM) $@
 endif
 
