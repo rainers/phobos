@@ -112,11 +112,11 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                 for(;;) {
                     dchar c = peekChar();
                     if(c == '\n')
-					{
+                    {
                         line++;
                         pos = 1;
-					}
-					if(!isWhite(c))
+                    }
+                    if(!isWhite(c))
                         break;
                     next = 0;
                 }
