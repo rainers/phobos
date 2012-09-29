@@ -1661,7 +1661,7 @@ class DocumentParser : ElementParser
         try
         {
             // Confirm that the input is valid XML
-            check(xmlText_);
+            //check(xmlText_);
         }
         catch (CheckException e)
         {
@@ -2159,6 +2159,11 @@ private
         if (s is old) fail();
     }
 
+    void checkSpace_opt(ref string s) // rule 3
+    {
+        munch(s,"\u0020\u0009\u000A\u000D");
+    }
+
     void checkName(ref string s, out string name) // rule 5
     {
         mixin Check!("Name");
@@ -2273,7 +2278,7 @@ private
             checkVersionInfo(s);
             opt!(checkEncodingDecl)(s);
             opt!(checkSDDecl)(s);
-            opt!(checkSpace)(s);
+            checkSpace_opt(s);
             checkLiteral("?>",s);
         }
         catch(Err e) { fail(e); }
@@ -2299,9 +2304,9 @@ private
 
         try
         {
-            opt!(checkSpace)(s);
+            checkSpace_opt(s);
             checkLiteral("=",s);
-            opt!(checkSpace)(s);
+            checkSpace_opt(s);
         }
         catch(Err e) { fail(e); }
     }
@@ -2387,7 +2392,7 @@ private
             checkLiteral("<",s);
             checkName(s,name);
             star!(seq!(checkSpace,checkAttribute))(s);
-            opt!(checkSpace)(s);
+            checkSpace_opt(s);
             if (s.length != 0 && s[0] == '/')
             {
                 s = s[1..$];
@@ -2420,7 +2425,7 @@ private
         {
             checkLiteral("</",s);
             checkName(s,name);
-            opt!(checkSpace)(s);
+            checkSpace_opt(s);
             checkLiteral(">",s);
         }
         catch(Err e) { fail(e); }
