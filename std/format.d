@@ -71,7 +71,7 @@ deprecated alias FormatException FormatError;
 /**********************************************************************
    Interprets variadic argument list $(D args), formats them according
    to $(D fmt), and sends the resulting characters to $(D w). The
-   encoding of the output is the same as $(D Char). type $(D Writer)
+   encoding of the output is the same as $(D Char). The type $(D Writer)
    must satisfy $(XREF range,isOutputRange!(Writer, Char)).
 
    The variadic arguments are normally consumed in order. POSIX-style
@@ -5016,7 +5016,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 }
                 else version(Win64)
                 {
-                    s = tis.xtoString(argptr);
+                    void* p = argptr;
+                    if (tis.tsize() > 8)
+                        p = *cast(void**)p;
+                    s = tis.xtoString(p);
                     argptr += size_t.sizeof;
                 }
                 else version (X86_64)

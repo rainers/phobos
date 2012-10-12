@@ -2552,14 +2552,15 @@ if (isInputRange!(Unqual!Range)
 
     @property auto ref front()
     {
-        assert(_maxAvailable > 0,
-                "Attempting to fetch the front of an empty " ~ Take.stringof);
+        assert(!empty,
+            "Attempting to fetch the front of an empty "
+            ~ Take.stringof);
         return source.front;
     }
 
     void popFront()
     {
-        assert(_maxAvailable > 0,
+        assert(!empty,
             "Attempting to popFront() past the end of a "
             ~ Take.stringof);
         source.popFront();
@@ -2575,7 +2576,9 @@ if (isInputRange!(Unqual!Range)
     static if (hasAssignableElements!R)
         @property auto front(ElementType!R v)
         {
-            assert(_maxAvailable);
+            assert(!empty,
+                "Attempting to assign to the front of an empty "
+                ~ Take.stringof);
             // This has to return auto instead of void because of Bug 4706.
             source.front = v;
         }
@@ -2584,7 +2587,9 @@ if (isInputRange!(Unqual!Range)
     {
         auto moveFront()
         {
-            assert(_maxAvailable);
+            assert(!empty,
+                "Attempting to move the front of an empty "
+                ~ Take.stringof);
             return .moveFront(source);
         }
     }
@@ -2612,7 +2617,7 @@ if (isInputRange!(Unqual!Range)
     {
         void popBack()
         {
-            assert(_maxAvailable > 0,
+            assert(!empty,
                 "Attempting to popBack() past the beginning of a "
                 ~ Take.stringof);
             --_maxAvailable;
@@ -2620,13 +2625,15 @@ if (isInputRange!(Unqual!Range)
 
         @property auto ref back()
         {
-            assert(_maxAvailable);
+            assert(!empty,
+                "Attempting to fetch the back of an empty "
+                ~ Take.stringof);
             return source[this.length - 1];
         }
 
         auto ref opIndex(size_t index)
         {
-            assert(index < this.length,
+            assert(index < length,
                 "Attempting to index out of the bounds of a "
                 ~ Take.stringof);
             return source[index];
@@ -2637,15 +2644,17 @@ if (isInputRange!(Unqual!Range)
             auto back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
-                assert(_maxAvailable);
+                assert(!empty, 
+                    "Attempting to assign to the back of an empty "
+                    ~ Take.stringof);
                 source[this.length - 1] = v;
             }
 
             void opIndexAssign(ElementType!R v, size_t index)
             {
-                assert(index < this.length,
-                        "Attempting to index out of the bounds of a "
-                        ~ Take.stringof);
+                assert(index < length,
+                    "Attempting to index out of the bounds of a "
+                    ~ Take.stringof);
                 source[index] = v;
             }
         }
@@ -2654,13 +2663,15 @@ if (isInputRange!(Unqual!Range)
         {
             auto moveBack()
             {
-                assert(_maxAvailable);
+                assert(!empty, 
+                    "Attempting to move the back of an empty "
+                    ~ Take.stringof);
                 return .moveAt(source, this.length - 1);
             }
 
             auto moveAt(size_t index)
             {
-                assert(index < this.length,
+                assert(index < length,
                     "Attempting to index out of the bounds of a "
                     ~ Take.stringof);
                 return .moveAt(source, index);
@@ -3183,6 +3194,8 @@ Example:
 int[] a = [ 1, 2, 3, 4, 5 ];
 a.popFrontN(2);
 assert(a == [ 3, 4, 5 ]);
+a.popFrontN(7);
+assert(a == [ ]);
 ----
 */
 size_t popFrontN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
@@ -3219,6 +3232,15 @@ unittest
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popFrontN(2);
     assert(a == [ 3, 4, 5 ]);
+    a.popFrontN(7);
+    assert(a == [ ]);
+}
+unittest
+{
+    auto LL = iota(1L, 7L);
+    auto r = popFrontN(LL, 2);
+    assert(equal(LL, [3L, 4L, 5L, 6L]));
+    assert(r == 2);
 }
 
 /**
@@ -3237,22 +3259,35 @@ unittest
    int[] a = [ 1, 2, 3, 4, 5 ];
    a.popBackN(2);
    assert(a == [ 1, 2, 3 ]);
+   a.popBackN(7);
+   assert(a == [ ]);
    ----
 */
 size_t popBackN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
 {
     static if (hasSlicing!(Range) && hasLength!(Range))
     {
-        n = cast(size_t) min(n, r.length);
+        n = min(n, r.length);
         auto newLen = r.length - n;
         r = r[0 .. newLen];
     }
     else
     {
-        foreach (i; 0 .. n)
+        static if (hasLength!Range)
         {
-            if (r.empty) return i;
-            r.popBack();
+            n = min(n, r.length);
+            foreach (i; 0 .. n)
+            {
+                r.popBack();
+            }
+        }
+        else
+        {
+            foreach (i; 0 .. n)
+            {
+                if (r.empty) return i;
+                r.popBack();
+            }
         }
     }
     return n;
@@ -3263,6 +3298,8 @@ unittest
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popBackN(2);
     assert(a == [ 1, 2, 3 ]);
+    a.popBackN(7);
+    assert(a == [ ]);
 }
 unittest
 {
@@ -4227,6 +4264,8 @@ private string lockstepApply(Ranges...)(bool withIndex) if (Ranges.length > 0)
    lengths and $(D s) == $(D StoppingPolicy.requireSameLength), throw an
    exception.  $(D s) may not be $(D StoppingPolicy.longest), and passing this
    will throw an exception.
+
+   By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
 
    BUGS:  If a range does not offer lvalue access, but $(D ref) is used in the
    $(D foreach) loop, it will be silently accepted but any modifications
@@ -6737,7 +6776,7 @@ enum SearchPolicy
    ----
 */
 struct SortedRange(Range, alias pred = "a < b")
-if (isRandomAccessRange!Range)
+if (isRandomAccessRange!Range && hasLength!Range)
 {
     private alias binaryFun!pred predFun;
     private bool geq(L, R)(L lhs, R rhs)
@@ -6818,13 +6857,14 @@ if (isRandomAccessRange!Range)
     }
 
     /// Ditto
-    auto opSlice(size_t a, size_t b)
-    {
-        assert(a <= b);
-        typeof(this) result;
-        result._input = _input[a .. b];// skip checking
-        return result;
-    }
+    static if (hasSlicing!Range)
+        auto opSlice(size_t a, size_t b)
+        {
+            assert(a <= b);
+            typeof(this) result;
+            result._input = _input[a .. b];// skip checking
+            return result;
+        }
 
     /// Ditto
     @property size_t length()          //const

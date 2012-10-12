@@ -128,7 +128,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.xml;
 
-import std.algorithm : count;
+import std.algorithm : count, startsWith;
 import std.array;
 import std.ascii;
 import std.string;
@@ -384,7 +384,8 @@ S encode(S)(S s)
 
 unittest
 {
-    assert(encode("hello") is "hello");
+    auto s = "hello";
+    assert(encode(s) is s);
     assert(encode("a > b") == "a &gt; b", encode("a > b"));
     assert(encode("a < b") == "a &lt; b");
     assert(encode("don't") == "don&apos;t");
@@ -501,7 +502,8 @@ unittest
     }
 
     // Assert that things that should work, do
-    assert(decode("hello",          DecodeMode.STRICT) is "hello");
+    auto s = "hello";
+    assert(decode(s,                DecodeMode.STRICT) is s);
     assert(decode("a &gt; b",       DecodeMode.STRICT) == "a > b");
     assert(decode("a &lt; b",       DecodeMode.STRICT) == "a < b");
     assert(decode("don&apos;t",     DecodeMode.STRICT) == "don't");

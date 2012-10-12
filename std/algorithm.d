@@ -326,6 +326,8 @@ version(unittest)
 }
 
 /**
+$(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
+
 Implements the homonym function (also known as $(D transform)) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(x))
@@ -585,8 +587,10 @@ unittest
     assert(equal(m, [1L, 4L, 9L]));
 }
 
-// reduce
 /**
+$(D auto reduce(Args...)(Args args)
+    if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]));)
+
 Implements the homonym function (also known as $(D accumulate), $(D
 compress), $(D inject), or $(D foldl)) present in various programming
 languages of functional flavor. The call $(D reduce!(fun)(seed,
@@ -864,7 +868,7 @@ unittest
 }
 
 /**
-Fills a range with a value.
+Fills $(D range) with a $(D filler).
 
 Example:
 ----
@@ -874,32 +878,21 @@ assert(a == [ 5, 5, 5, 5 ]);
 ----
  */
 void fill(Range, Value)(Range range, Value filler)
-if (isInputRange!Range && is(typeof(range.front = filler)))
+    if (isInputRange!Range && is(typeof(range.front = filler)))
 {
-    alias ElementType!Range T;
-    static if (hasElaborateCopyConstructor!T || !isDynamicArray!Range)
+    static if (is(typeof(range[] = filler)))
     {
-        for (; !range.empty; range.popFront())
-        {
-            range.front = filler;
-        }
+        range[] = filler;
+    }
+    else static if (is(typeof(range[] = T(filler))))
+    {
+        range[] = T(filler);
     }
     else
     {
-        if (range.empty) return;
-        // Range is a dynamic array of bald values, just fill memory
-        // Can't use memcpy or memmove coz ranges overlap
-        range.front = filler;
-        auto bytesToFill = T.sizeof * (range.length - 1);
-        auto bytesFilled = T.sizeof;
-        while (bytesToFill)
+        for ( ; !range.empty; range.popFront() )
         {
-            auto fillNow = min(bytesToFill, bytesFilled);
-            memcpy(cast(void*) range.ptr + bytesFilled,
-                    cast(void*) range.ptr,
-                  fillNow);
-            bytesToFill -= fillNow;
-            bytesFilled += fillNow;
+            range.front = filler;
         }
     }
 }
@@ -928,6 +921,39 @@ unittest
     fill(range,filler);
     foreach(value;range.arr)
     	assert(value == filler);
+}
+unittest
+{
+    //ER8638_1 IS_NOT self assignable
+    static struct ER8638_1
+    {
+        void opAssign(int){}
+    }
+
+    //ER8638_1 IS self assignable
+    static struct ER8638_2
+    {
+        void opAssign(ER8638_2){}
+        void opAssign(int){}
+    }
+
+    auto er8638_1 = new ER8638_1[](10);
+    auto er8638_2 = new ER8638_2[](10);
+    er8638_1.fill(5); //generic case
+    er8638_2.fill(5); //opSlice(T.init) case
+}
+unittest
+{
+    {
+        int[] a = [1, 2, 3];
+        immutable(int) b = 0;
+        static assert(__traits(compiles, a.fill(b))); 
+    }
+    {
+        double[] a = [1, 2, 3];
+        immutable(int) b = 0;
+        static assert(__traits(compiles, a.fill(b))); 
+    }
 }
 
 /**
@@ -1156,11 +1182,12 @@ unittest
     //writeln(benchmark!(fun0, fun1, fun2)(10000));
 }
 
-// filter
 /**
+$(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
+
 Implements the homonym function present in various programming
-languages of functional flavor. The call $(D filter!(fun)(range))
-returns a new range only containing elements $(D x) in $(D r) for
+languages of functional flavor. The call $(D filter!(predicate)(range))
+returns a new range only containing elements $(D x) in $(D range) for
 which $(D predicate(x)) is $(D true).
 
 Example:
@@ -1321,8 +1348,9 @@ unittest
     assert(equal(filter!underX(list), [ 1, 2, 3, 4 ]));
 }
 
-// filterBidirectional
 /**
+ * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));)
+ *
  * Similar to $(D filter), except it defines a bidirectional
  * range. There is a speed disadvantage - the constructor spends time
  * finding the last element in the range that satisfies the filtering
@@ -7356,6 +7384,9 @@ private template validPredicates(E, less...) {
 }
 
 /**
+$(D void multiSort(Range)(Range r)
+    if (validPredicates!(ElementType!Range, less));)
+
 Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
 "a.date > b.date")(r)) sorts the range $(D r) by $(D id) ascending,
 and sorts elements that have the same $(D id) by $(D date)
@@ -7610,7 +7641,7 @@ private void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
 Sorts a range using an algorithm akin to the $(WEB
 wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform), also
 known as the decorate-sort-undecorate pattern in Python and Lisp. (Not
-to be confused with $(WEB youtube.com/watch?v=S25Zf8svHZQ, the other
+to be confused with $(WEB youtube.com/watch?v=UHw6KXbvazs, the other
 Schwartz).) This function is helpful when the sort comparison includes
 an expensive computation. The complexity is the same as that of the
 corresponding $(D sort), but $(D schwartzSort) evaluates $(D
@@ -8385,11 +8416,8 @@ unittest
     assert(canFind([0, 1, 2, 3], [1, 3], [2, 4]) == 0);
 }
 
-/**
-Forwards to $(D any) for backwards compatibility.
-
-$(RED Scheduled for deprecation in September 2012. Please use $(D any) instead.)
-*/
+//Explictly Undocumented. Do not use. It may be deprecated in the future.
+//Use any instead.
 bool canFind(alias pred, Range)(Range range)
 {
     return any!pred(range);
@@ -8411,7 +8439,6 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto a = [ 1, 2, 0, 4 ];
-    assert(canFind!"a == 2"(a));
     assert(any!"a == 2"(a));
 }
 

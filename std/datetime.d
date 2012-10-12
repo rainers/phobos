@@ -7392,10 +7392,7 @@ assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
         return Date(dayOfGregorianCal).daysInMonth;
     }
 
-    /++
-        $(RED Deprecated. It will be removed in September 2012.
-              Please use daysInMonth instead.)
-      +/
+    //Explicitly undocumented. Do not use. To be removed in March 2013.
     deprecated @property ubyte endOfMonthDay() const nothrow
     {
         return Date(dayOfGregorianCal).daysInMonth;
@@ -12405,10 +12402,7 @@ assert(Date(2000, 6, 4).daysInMonth == 30);
         return maxDay(_year, _month);
     }
 
-    /++
-        $(RED Deprecated. It will be removed in September 2012.
-              Please use daysInMonth instead.)
-      +/
+    //Explicitly undocumented. Do not use. To be removed in March 2013.
     deprecated @property ubyte endOfMonthDay() const pure nothrow
     {
         return maxDay(_year, _month);
@@ -17298,10 +17292,7 @@ assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
         return _date.daysInMonth;
     }
 
-    /++
-        $(RED Deprecated. It will be removed in September 2012.
-              Please use daysInMonth instead.)
-      +/
+    //Explicitly undocumented. Do not use. To be removed in March 2013.
     deprecated @property ubyte endOfMonthDay() const pure nothrow
     {
         return _date.daysInMonth;
@@ -30667,7 +30658,7 @@ void foo()
     real sum = 0;
     // To know the number of seconds,
     // use properties of TickDuration.
-    // (seconds, mseconds, useconds, hnsecs)
+    // (seconds, msecs, usecs, hnsecs)
     foreach(t; times)
        sum += t.hnsecs;
     writeln("Average time: ", sum/n, " hnsecs");
@@ -30702,7 +30693,7 @@ public:
         real sum = 0;
         // To get the number of seconds,
         // use properties of TickDuration.
-        // (seconds, mseconds, useconds, hnsecs)
+        // (seconds, msecs, usecs, hnsecs)
         foreach(t; times)
            sum += t.hnsecs;
         writeln("Average time: ", sum/n, " hnsecs");
