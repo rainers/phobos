@@ -60,6 +60,8 @@ ifeq (,$(MODEL))
 	MODEL:=32
 endif
 
+override PIC:=$(if $(PIC),-fPIC,)
+
 # Configurable stuff that's rarely edited
 DRUNTIME_PATH = ../druntime
 ZIPFILE = phobos.zip
@@ -75,10 +77,6 @@ STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 MKDIR=mkdir
-
-# Variable defined in an OS-dependent manner (see below)
-CFLAGS =
-DFLAGS =
 
 # BUILD can be debug or release, but is unset by default; recursive
 # invocation will set it. See the debug and release targets below.
@@ -115,8 +113,9 @@ else
 endif
 
 # Set CFLAGS
-ifeq ($(CC),cc)
-	CFLAGS += -m$(MODEL)
+CFLAGS :=
+ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
+	CFLAGS += -m$(MODEL) $(PIC)
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -131,7 +130,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
