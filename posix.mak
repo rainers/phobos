@@ -138,13 +138,13 @@ else
 endif
 
 # CFLAGS_O is CFLAGS with option appended such that $(CFLAGS_O)$@ specifies the output file
-ifeq (win3264,$(OS)$(MODEL))
+ifeq (cl.exe,$(findstring cl.exe,$(CC)))
 	CFLAGS_O = $(subst -O,-O2,$(subst -g,/Zi,$(CFLAGS))) -Fo
-	DFLAGS := $(subst -g,,$(DFLAGS))  # no debug info yet
+#	DFLAGS := $(subst -g,,$(DFLAGS))  # no debug info yet
 else
 	CFLAGS_O = $(CFLAGS) -o
 endif
-	
+
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))
 	DOTOBJ:=.o

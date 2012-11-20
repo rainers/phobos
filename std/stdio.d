@@ -28,7 +28,11 @@ version(unittest) import std.file;
 
 version (DigitalMars)
 {
-    version (Win32)
+    version (COFF)
+    {
+        version = MICROSOFT_STDIO;
+    }
+    else version (Win32)
     {
         // Specific to the way Digital Mars C does stdio
         version = DIGITAL_MARS_STDIO;
@@ -506,6 +510,7 @@ $(D rawRead) always reads in binary mode on Windows.
     T[] rawRead(T)(T[] buffer)
     {
         enforce(buffer.length, "rawRead must take a non-empty buffer");
+        version(MICROSOFT_STDIO) {} else
         version(Win32)
         {
             immutable fd = ._fileno(_p.handle);
@@ -551,6 +556,7 @@ $(D rawWrite) always writes in binary mode on Windows.
  */
     void rawWrite(T)(in T[] buffer)
     {
+        version(MICROSOFT_STDIO) {} else
         version(Windows)
         {
             flush(); // before changing translation mode
