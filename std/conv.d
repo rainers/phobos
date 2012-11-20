@@ -1075,8 +1075,8 @@ body
     {
         enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
         if (radix == 10)
-            return to!string(value);     // handle signed cases only for radix 10
-        return to!string(cast(ulong) value, radix);
+            return to!T(value);     // handle signed cases only for radix 10
+        return to!T(cast(ulong) value, radix);
     }
     else
     {
@@ -1084,7 +1084,7 @@ body
         uint i = buffer.length;
 
         if (value < radix && value < hexDigits.length)
-            return hexDigits[cast(size_t)value .. cast(size_t)value + 1];
+            return to!T(hexDigits[cast(size_t)value .. cast(size_t)value + 1]);
 
         do
         {
