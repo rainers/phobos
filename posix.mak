@@ -309,10 +309,10 @@ endif
 %$(DOTEXE) : %$(DOTOBJ)
 
 $(ROOT)/emptymain.d : $(ROOT)/.directory
-ifeq (,$(findstring win,$(OS)))
-	@echo 'void main(){}' >$@
-else
+ifeq (cmd.exe,$(findstring $(SHELL),cmd.exe))
 	@echo void main(){} >$@
+else
+	@echo 'void main(){}' >$@
 endif
 
 $(ROOT)/.directory :
