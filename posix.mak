@@ -264,7 +264,7 @@ else
 # is set the default build to $(BUILD) (which is either debug or
 # release) and then let the unittest depend on that build's unittests.
 $(BUILD) : $(LIB)
-unittest : $(addsuffix $(DOTEXE),$(addprefix $(ROOT)/unittest/,$(D_MODULES)))
+unittest : $(ROOT)/unittest/testall$(DOTEXE) $(addsuffix $(DOTEXE),$(addprefix $(ROOT)/unittest/,$(D_MODULES))) 
 endif
 
 ################################################################################
@@ -304,6 +304,23 @@ else
 	@$(DMD) $(subst /,$(PATHSEP), $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
 	 	$(ROOT)/emptymain.d $< ) || $(RM) $@
 endif
+
+$(ROOT)/unittest/testall$(DOTEXE) : $(D_FILES) $(LIB) $(ROOT)/emptymain.d
+	@echo Testing $@
+ifeq (,$(findstring win,$(OS)))
+	$(subst /,$(PATHSEP),$(DMD) $(DFLAGS) $(LINKOPTS) "-of$@" \
+	 	$(ROOT)/emptymain.d $(D_FILES) )
+	@$(RUN) $@
+# make the file very old so it builds and runs again if it fails
+#	@touch -t 197001230123 $@
+# run unittest in its own directory
+	@$(RUN) $@
+# succeeded, render the file new again
+#	@touch $@
+else
+	$(DMD) $(subst /,$(PATHSEP), $(DFLAGS) $(LINKOPTS) "-of$@" \
+	 	$(ROOT)/emptymain.d $(D_FILES) ) || $(RM) $@
+endif	
 
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)
