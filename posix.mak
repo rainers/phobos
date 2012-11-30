@@ -292,8 +292,12 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
 ifeq (,$(findstring win,$(OS)))
-	@$(subst /,$(PATHSEP),$(DMD) $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
-	 	$(ROOT)/emptymain.d $< )
+	@if $(GREP) -q unittest $< ; then \
+	echo Testing $@ && \
+	@$(subst /,\\,$(DMD) $(DFLAGS) -unittest $(LINKOPTS) "-of$@" $(ROOT)/emptymain.d $< ) \
+	$(RUN) $@ ; \
+	else echo Skipping $< ; \
+	fi
 # make the file very old so it builds and runs again if it fails
 #	@touch -t 197001230123 $@
 # run unittest in its own directory

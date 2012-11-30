@@ -26,22 +26,16 @@ import std.algorithm, std.array, std.conv, std.exception, std.format,
     std.typetuple, std.utf;
 version(unittest) import std.file;
 
-version (DigitalMars)
+version (CRuntime_Microsoft)
 {
-    version (COFF)
-    {
-        version = MICROSOFT_STDIO;
-    }
-    else version (Win32)
-    {
-        // Specific to the way Digital Mars C does stdio
-        version = DIGITAL_MARS_STDIO;
-        import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
-    }
-    else version (Win64)
-    {
-        version = MICROSOFT_STDIO;
-    }
+    version = MICROSOFT_STDIO;
+}
+
+version (CRuntime_DigitalMars)
+{
+    // Specific to the way Digital Mars C does stdio
+    version = DIGITAL_MARS_STDIO;
+    import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
 }
 
 version (Posix)
