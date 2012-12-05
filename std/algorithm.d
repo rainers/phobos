@@ -3597,7 +3597,7 @@ few times as possible.
  */
 Tuple!(Range, size_t) find(alias pred = "a == b", Range, Ranges...)
 (Range haystack, Ranges needles)
-if (Ranges.length > 1 && allSatisfy!(isForwardRange, Ranges))
+if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 {
     for (;; haystack.popFront())
     {
@@ -3616,6 +3616,8 @@ unittest
     auto s1 = "Mary has a little lamb";
     //writeln(find(s1, "has a", "has an"));
     assert(find(s1, "has a", "has an") == tuple("has a little lamb", 1));
+    assert(find(s1, 't', "has a", "has an") == tuple("has a little lamb", 2));
+    assert(find(s1, 't', "has a", 'y', "has an") == tuple("y has a little lamb", 3));
     assert(find("abc", "bc").length == 2);
 }
 
@@ -6477,7 +6479,6 @@ unittest
                 bool empty() { return i >= data.length; }
                 T front() { return data[i]; }
                 T front(real e) { return data[i] = cast(T) e; }
-                alias front moveFront;
             }
             void popFront() { ++i; }
         }
