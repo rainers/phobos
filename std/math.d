@@ -2384,7 +2384,7 @@ long lrint(real x) @trusted pure nothrow
  */
 real round(real x) @trusted nothrow
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         auto old = FloatingPointControl.getControlState();
         FloatingPointControl.setControlState((old & ~FloatingPointControl.ROUNDING_MASK) | FloatingPointControl.roundToZero);

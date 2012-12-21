@@ -4654,14 +4654,11 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 {
                     sl = fbuf.length;
                     int n;
-                    version (Win64)
-                    {
-                        if(isnan(v)) // snprintf writes 1.#QNAN
-                            n = snprintf(fbuf.ptr, sl, "nan");
-                        else
-                            n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
-                                precision, cast(double)v);
-                    }
+                    if(isnan(v)) // snprintf writes 1.#QNAN
+                        n = snprintf(fbuf.ptr, sl, "nan");
+                    else version (CRuntime_Microsoft)
+                        n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
+                                     precision, cast(double)v);
                     else
                         n = snprintf(fbuf.ptr, sl, format.ptr, field_width,
                                 precision, v);
