@@ -22,6 +22,8 @@
 # OS can be linux, win32, win32remote, win32wine, osx, or freebsd. If left
 # blank, the system will be determined by using uname
 
+QUIET:=@
+
 OS:=
 uname_S:=$(shell uname -s)
 ifeq (Darwin,$(uname_S))
@@ -297,11 +299,11 @@ ifeq (,$(findstring win,$(OS)))
 # make the file very old so it builds and runs again if it fails
 #	@touch -t 197001230123 $@
 # run unittest in its own directory
-	@$(RUN) $@
+	$(QUIET)$(RUN) $@
 # succeeded, render the file new again
 #	@touch $@
 else
-	@$(DMD) $(subst /,$(PATHSEP), $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
+	$(QUIET)$(DMD) $(subst /,$(PATHSEP), $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
 	 	$(ROOT)/emptymain.d $< ) || $(RM) $@
 endif
 
