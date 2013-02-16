@@ -276,7 +276,8 @@ endif
 	$(CC) -c $(CFLAGS_O)$@ $<
 
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(MAKEFILE)
-	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -lib -of$@ $(D_FILES) $(OBJS)
+# $(DRUNTIME) 
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
