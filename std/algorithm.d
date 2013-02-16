@@ -260,8 +260,8 @@ of sets implemented as a range of sorted ranges.)
 $(TR $(TDNW $(LREF setDifference)) $(TD Lazily computes the set
 difference of two or more sorted ranges.)
 )
-$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the
-set difference of two or more sorted ranges.)
+$(TR $(TDNW $(LREF setIntersection)) $(TD Lazily computes the 
+intersection of two or more sorted ranges.)
 )
 $(TR $(TDNW $(LREF setSymmetricDifference)) $(TD Lazily
 computes the symmetric set difference of two or more sorted ranges.)
@@ -9234,7 +9234,7 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
         ahead.popFront();
         size_t i;
 
-        for (; !ahead.empty; ahead.popFront(), ++i)
+        for (; !ahead.empty; ahead.popFront(), r.popFront(), ++i)
         {
             if (!binaryFun!less(ahead.front, r.front)) continue;
             // Check for antisymmetric predicate
@@ -9248,6 +9248,26 @@ bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
         }
     }
     return true;
+}
+
+unittest
+{
+    // Issue 9457
+    auto x = "abcd";
+    assert(isSorted(x));
+    auto y = "acbd";
+    assert(!isSorted(y));
+
+    int[] a = [1, 2, 3];
+    assert(isSorted(a));
+    int[] b = [1, 3, 2];
+    assert(!isSorted(b));
+
+    dchar[] ds = "コーヒーが好きです"d.dup;
+    sort(ds);
+    string s = to!string(ds);
+    assert(isSorted(ds));  // random-access
+    assert(isSorted(s));   // bidirectional
 }
 
 // makeIndex
@@ -11399,8 +11419,6 @@ unittest
     // And therefore, by set comprehension, XY == Expected
 }
 
-// FIXME: this unittest has been disabled because of issue 8542.
-version(none)
 unittest
 {
     auto N = sequence!"n"(0);
