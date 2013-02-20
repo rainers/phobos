@@ -2,7 +2,7 @@
 
 CC=dmc
 LD=link
-CFLAGS=-o
+CFLAGS=-o -NL
 LDFLAGS=
 O=.obj
 
