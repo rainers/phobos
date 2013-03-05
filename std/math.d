@@ -2393,7 +2393,26 @@ real floor(real x) @trusted nothrow
             ret                         ;
         }
     }
-    else
+    else version(CRuntime_Microsoft)
+	{
+        asm
+        {
+            naked                       ;
+            fld     real ptr [x]        ;
+            fstcw   word ptr [x+8]      ;
+            mov     AL,9[x]             ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x04             ; // round to -infinity
+            mov     9[x],AL             ;
+            fldcw   word ptr[x+8]       ;
+            frndint                     ;
+            mov     9[x],DL             ;
+            fldcw   word ptr[x+8]       ;
+            ret                         ;
+        }
+	}
+	else
         return core.stdc.math.floorl(x);
 }
 
