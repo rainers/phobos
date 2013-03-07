@@ -326,12 +326,12 @@ module std.algorithm;
 
 import std.c.string, core.bitop;
 import std.array, std.ascii, std.container, std.conv, std.exception,
-    std.functional, std.math, std.range, std.string,
+    std.functional, std.math, std.random, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.uni, std.utf;
 
 version(unittest)
 {
-    import std.random, std.stdio, std.string;
+    import std.stdio;
     mixin(dummyRanges);
 }
 
@@ -9911,13 +9911,18 @@ assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
 bool all(alias pred, R)(R range)
 if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
 {
-    return find!(not!(unaryFun!pred))(range).empty;
+    // dmd @@@BUG9578@@@ workaround
+    // return find!(not!(unaryFun!pred))(range).empty;
+    bool notPred(ElementType!R a) { return !unaryFun!pred(a); }
+    return find!notPred(range).empty;
 }
 
 unittest
 {
     assert(all!"a & 1"([1, 3, 5, 7, 9]));
     assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
+    int x = 1;
+    assert(all!(a => a > x)([2, 3]));
 }
 
 // Deprecated. It will be removed in January 2013.  Use std.range.SortedRange.canFind.

@@ -20,7 +20,7 @@ public import core.stdc.stdio, std.string : KeepTerminator;
 static import std.c.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
-    core.stdc.string, core.stdc.wchar_;
+    core.stdc.string, core.stdc.wchar_, core.exception;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
     std.range, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
@@ -1149,7 +1149,7 @@ to this file. */
 
 
         /// Range primitive operations.
-        @property
+        @property nothrow
         bool empty() const
         {
             return !file_.isOpen;
@@ -1157,9 +1157,10 @@ to this file. */
 
 
         /// Ditto
-        @property
-        nothrow ubyte[] front()
+        @property nothrow
+        ubyte[] front()
         {
+            version(assert) if (empty) throw new RangeError();
             return chunk_;
         }
 
@@ -1167,7 +1168,7 @@ to this file. */
         /// Ditto
         void popFront()
         {
-            enforce(!empty, "Cannot call popFront on empty range");
+            version(assert) if (empty) throw new RangeError();
 
             chunk_ = file_.rawRead(chunk_);
             if (chunk_.length == 0)
@@ -1435,13 +1436,13 @@ struct LockingTextReader
 
     @property dchar front()
     {
-        enforce(!empty);
+        version(assert) if (empty) throw new RangeError();
         return _crt;
     }
 
     void popFront()
     {
-        enforce(!empty);
+        version(assert) if (empty) throw new RangeError();
         if (FGETC(cast(_iobuf*) _f._p.handle) == -1)
         {
             enforce(_f.eof);
