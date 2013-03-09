@@ -302,7 +302,7 @@ private template fullyQualifiedNameImplForSymbols(alias T)
         if(s.skipOver("package ") || s.skipOver("module "))
             return s;
         return s.findSplit("(")[0];
-    }(T.stringof);
+    }(__traits(identifier, T));
 }
 
 unittest
@@ -315,6 +315,7 @@ unittest
     alias fqn = fullyQualifiedName;
     static assert(fqn!fqn == "std.traits.fullyQualifiedName");
     static assert(fqn!(QualifiedNameTests.Inner) == "std.traits.QualifiedNameTests.Inner");
+    static assert(fqn!(QualifiedNameTests.func) == "std.traits.QualifiedNameTests.func");
     import core.sync.barrier;
     static assert(fullyQualifiedName!Barrier == "core.sync.barrier.Barrier");
 }
@@ -2441,7 +2442,7 @@ unittest
 
     // void static array hides actual type of bits, so "may have indirections".
     static assert( hasIndirections!(void[1]));
-    interface I;
+    interface I {}
     struct S1 {}
     struct S2 { int a; }
     struct S3 { int a; int b; }
