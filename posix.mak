@@ -85,6 +85,7 @@ MAKEFILE:=$(lastword $(MAKEFILE_LIST))
 # Set DRUNTIME name and full path
 ifeq (,$(findstring win,$(OS)))
 	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).a
+	DRUNTIMESO = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL)so.a
 else
 	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
 endif
@@ -170,6 +171,7 @@ DDOC=$(DMD)
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
 	LIB = $(ROOT)/libphobos2.a
+	LIBSO = $(ROOT)/libphobos2so.so
 else
 	LIB = $(ROOT)/phobos.lib
 endif
@@ -250,8 +252,14 @@ ifeq ($(BUILD),)
 # targets. BUILD is not defined in user runs, only by recursive
 # self-invocations. So the targets in this branch are accessible to
 # end users.
+ifeq (linux,$(OS))
+release :
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release PIC=1 dll
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
+else
 release :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
+endif
 debug :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug
 unittest :
@@ -278,6 +286,11 @@ endif
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(MAKEFILE)
 	$(DMD) $(DFLAGS) -lib -of$@ $(D_FILES) $(OBJS)
 # $(DRUNTIME) 
+
+dll : $(LIBSO)
+
+$(LIBSO): $(OBJS)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ $(DRUNTIMESO) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
