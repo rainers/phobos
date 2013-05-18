@@ -232,7 +232,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
                 goto Next;
         }
 
-        return str.data;
+        return str.data ? str.data : "";
     }
 
     void parseValue(JSONValue* value)
@@ -267,9 +267,14 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T)
 
             case '[':
                 value.type = JSON_TYPE.ARRAY;
-                value.array = null;
 
-                if(testChar(']')) break;
+                if(testChar(']'))
+                {
+                    value.array = cast(JSONValue[]) "";
+                    break;
+                }
+
+                value.array = null;
 
                 do
                 {
@@ -556,4 +561,9 @@ unittest
     assert(toJSON(&val) == "\"\&spades;\&diams;\"");
 
     assertNotThrown(parseJSON(`{ "foo": "` ~ "\u007F" ~ `"}`));
+
+    with(parseJSON(`""`))
+        assert(str == "" && str !is null);
+    with(parseJSON(`[]`))
+        assert(!array.length && array !is null);
 }

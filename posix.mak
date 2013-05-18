@@ -168,10 +168,17 @@ endif
 # Set DDOC, the documentation generator
 DDOC=$(DMD)
 
+# Set VERSION, where the file is that contains the version string
+VERSION=../dmd/VERSION
+
+# Set SONAME, the name of the shared library.
+# The awk script will produce the last 2 digits of the version string, i.e. 2.063 produces 63
+SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$NF + 0 }' $(VERSION))
+
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
 	LIB = $(ROOT)/libphobos2.a
-	LIBSO = $(ROOT)/libphobos2so.so
+	LIBSO = $(ROOT)/$(SONAME).0
 else
 	LIB = $(ROOT)/phobos.lib
 endif
@@ -182,9 +189,9 @@ MAIN = $(ROOT)/emptymain.d
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64 bigint		\
         bitmanip compiler complex concurrency container conv		\
-        cpuid cstream ctype csv datetime demangle encoding exception	\
+        cstream csv datetime demangle encoding exception	\
         file format functional getopt json math mathspecial md5	\
-        metastrings mmfile numeric outbuffer parallelism path perf		\
+        metastrings mmfile numeric outbuffer parallelism path		\
         process random range regex signals socket socketstream	\
         stdint stdio stdiobase stream string syserror system traits		\
         typecons typetuple uni uri utf uuid variant xml zip zlib)
@@ -287,10 +294,16 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(MAKEFILE)
 	$(DMD) $(DFLAGS) -lib -of$@ $(D_FILES) $(OBJS)
 # $(DRUNTIME) 
 
-dll : $(LIBSO)
+dll : $(ROOT)/libphobos2.so
 
-$(LIBSO): $(OBJS)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ $(DRUNTIMESO) $(D_FILES) $(OBJS)
+$(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
+	ln -s $(notdir $(LIBSO)) $@ 
+
+$(ROOT)/$(SONAME): $(LIBSO)
+	ln -s $(notdir $(LIBSO)) $@
+
+$(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
