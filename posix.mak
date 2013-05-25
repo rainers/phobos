@@ -173,7 +173,9 @@ VERSION=../dmd/VERSION
 
 # Set SONAME, the name of the shared library.
 # The awk script will produce the last 2 digits of the version string, i.e. 2.063 produces 63
-SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$NF + 0 }' $(VERSION))
+ifeq (,$(findstring win,$(OS)))
+	SONAME = libphobos2.so.0.$(shell awk -F. '{ print $$NF + 0 }' $(VERSION))
+endif
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))

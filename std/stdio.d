@@ -36,12 +36,6 @@ else version (CRuntime_DigitalMars)
     version = DIGITAL_MARS_STDIO;
     import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
 }
-else version (Win32)
-{
-    // Specific to the way Digital Mars C does stdio
-    version = DIGITAL_MARS_STDIO;
-    import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
-}
 
 version (Posix)
 {
