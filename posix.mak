@@ -52,9 +52,9 @@ ifeq (Win,$(findstring Win,$(OS)))
 	OS:=win32
 endif
 
-# For now, 32 bit is the default model
-ifeq (,$(MODEL))
-	MODEL:=32
+MODEL:=default
+ifneq (default,$(MODEL))
+      MODEL_FLAG:=-m$(MODEL)
 endif
 
 override PIC:=$(if $(PIC),-fPIC,)
@@ -65,14 +65,14 @@ ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 # Documentation-related stuff
-DOCSRC = ../d-programming-language.org
+DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
 SRC_DOCUMENTABLES = index.d $(addsuffix .d,$(STD_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES) $(EXTRA_DOCUMENTABLES))
 STDDOC = $(DOCSRC)/std.ddoc
 BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc
-DDOCFLAGS=-m$(MODEL) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+DDOCFLAGS=$(MODEL_FLAG) -d -c -o- -version=StdDdoc -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 MKDIR=mkdir
 
 # BUILD can be debug or release, but is unset by default; recursive
@@ -113,7 +113,7 @@ endif
 # Set CFLAGS
 CFLAGS :=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
-	CFLAGS += -m$(MODEL) $(PIC)
+	CFLAGS += $(MODEL_FLAG) $(PIC)
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -128,7 +128,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL) $(PIC)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -299,10 +299,10 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(MAKEFILE)
 dll : $(ROOT)/libphobos2.so
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
-	ln -s $(notdir $(LIBSO)) $@ 
+	ln -sf $(notdir $(LIBSO)) $@ 
 
 $(ROOT)/$(SONAME): $(LIBSO)
-	ln -s $(notdir $(LIBSO)) $@
+	ln -sf $(notdir $(LIBSO)) $@
 
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(D_FILES) $(OBJS)
