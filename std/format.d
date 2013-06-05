@@ -3628,13 +3628,6 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
             input, fn, ln);
 }
 
-version(unittest)
-@property void checkCTFEable(alias dg)()
-{
-    static assert({ dg(); return true; }());
-    dg();
-}
-
 unittest
 {
     void booleanTest()
@@ -3713,7 +3706,9 @@ unittest
         formatReflectTest(aa, "{%([%s=%(%c%)]%|; %)}",  `{[1=hello]; [2=world]}`);
     }
 
-    checkCTFEable!({
+    import std.exception;
+    assertCTFEable!(
+    {
         booleanTest();
         integerTest();
         if (!__ctfe) floatingTest();    // snprintf
