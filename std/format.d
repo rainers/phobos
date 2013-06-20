@@ -1845,7 +1845,7 @@ unittest
       static if (flags & 4)
         string toString() const { return "S"; }
     }
-    formatTest(S!0b000([0, 1, 2]), "S!(0)([0, 1, 2])");
+    formatTest(S!0b000([0, 1, 2]), "S!0([0, 1, 2])");
     formatTest(S!0b001([0, 1, 2]), "[0, 1, 2]");        // Test for bug 7628
     formatTest(S!0b010([0, 1, 2]), "[0, 2, 4]");
     formatTest(S!0b011([0, 1, 2]), "[0, 2, 4]");
@@ -3122,6 +3122,11 @@ unittest
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
                 stream.data);
     }
+    else version (MinGW)
+    {
+        assert(stream.data == "1.67 -0XA.3D70A3D70A3D8P-3 nan",
+                stream.data);
+    }
     else
     {
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
@@ -3656,7 +3661,10 @@ unittest
     {
         auto f = 3.14;
         formatReflectTest(f, "%s",  `3.14`);
-        formatReflectTest(f, "%e",  `3.140000e+00`);
+        version (MinGW)
+            formatReflectTest(f, "%e",  `3.140000e+000`);
+        else
+            formatReflectTest(f, "%e",  `3.140000e+00`);
         formatReflectTest(f, "%f",  `3.140000`);
         formatReflectTest(f, "%g",  `3.14`);
     }
@@ -5584,6 +5592,9 @@ unittest
     //else version (OSX)
     //    assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
     //else
+    version (MinGW)
+        assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
+    else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
     s = std.string.format("%x %X", 0x1234AF, 0xAFAFAFAF);
