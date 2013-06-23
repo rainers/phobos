@@ -30,8 +30,7 @@ version(unittest) {
     import core.exception;
 }
 
-version(none)
-version (Win32) version (DigitalMars)
+version(CRuntime_DigitalMars)
 {
     version = DigitalMarsC;
 }

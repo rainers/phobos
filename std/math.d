@@ -1889,12 +1889,44 @@ int ilogb(real x)  @trusted nothrow
             mov     EAX,8[RSP]          ;
             ret                         ;
 
-          Lzeronan:
+        Lzeronan:
             mov     EAX,0x80000000      ;
             fstp    ST(0)               ;
             ret                         ;
 
-          Linfinity:
+        Linfinity:
+            mov     EAX,0x7FFFFFFF      ;
+            fstp    ST(0)               ;
+            ret                         ;
+        }
+    }
+    else version (CRuntime_Microsoft)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [x]        ;
+            fxam                        ;
+            fstsw   AX                  ;
+            and     AH,0x45             ;
+            cmp     AH,0x40             ;
+            jz      Lzeronan            ;
+            cmp     AH,5                ;
+            jz      Linfinity           ;
+            cmp     AH,1                ;
+            jz      Lzeronan            ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            fistp   dword ptr 8[x]      ;
+            mov     EAX,8[x]            ;
+            ret                         ;
+
+        Lzeronan:
+            mov     EAX,0x80000000      ;
+            fstp    ST(0)               ;
+            ret                         ;
+
+        Linfinity:
             mov     EAX,0x7FFFFFFF      ;
             fstp    ST(0)               ;
             ret                         ;
@@ -2098,6 +2130,17 @@ real logb(real x) @trusted nothrow
             ret                         ;
         }
     }
+    else version (CRuntime_Microsoft)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [x]        ;
+            fxtract                     ;
+            fstp    ST(0)               ;
+            ret                         ;
+        }
+    }
     else
         return core.stdc.math.logbl(x);
 }
@@ -2118,7 +2161,7 @@ real logb(real x) @trusted nothrow
  */
 real fmod(real x, real y) @trusted nothrow
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         return x % y;
     }
@@ -2139,7 +2182,7 @@ real fmod(real x, real y) @trusted nothrow
  */
 real modf(real x, ref real i) @trusted nothrow
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         i = trunc(x);
         return copysign(isInfinity(x) ? 0.0 : x - i, x);
@@ -2209,7 +2252,7 @@ unittest
  */
 real cbrt(real x) @trusted nothrow
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         return copysign(exp2(yl2x(fabs(x), 1.0L/3.0L)), x);
     }
@@ -2360,6 +2403,25 @@ real ceil(real x)  @trusted nothrow
             ret                         ;
         }
     }
+    else version(CRuntime_Microsoft)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [x]        ;
+            fstcw   word ptr 8[x]       ;
+            mov     AL,9[x]             ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x08             ; // round to +infinity
+            mov     9[x],AL             ;
+            fldcw   word ptr 8[x]       ;
+            frndint                     ;
+            mov     9[x],DL             ;
+            fldcw   word ptr 8[x]       ;
+            ret                         ;
+        }
+    }
     else
         return core.stdc.math.ceill(x);
 }
@@ -2396,7 +2458,7 @@ real floor(real x) @trusted nothrow
         }
     }
     else version(CRuntime_Microsoft)
-	{
+    {
         asm
         {
             naked                       ;
@@ -2413,8 +2475,8 @@ real floor(real x) @trusted nothrow
             fldcw   word ptr[x+8]       ;
             ret                         ;
         }
-	}
-	else
+    }
+    else
         return core.stdc.math.floorl(x);
 }
 
@@ -2433,7 +2495,7 @@ unittest
  */
 real nearbyint(real x) @trusted nothrow
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         assert(0);      // not implemented in C library
     }
@@ -2562,6 +2624,25 @@ real trunc(real x) @trusted nothrow
             ret                         ;
         }
     }
+    else version(CRuntime_Microsoft)
+    {
+        asm
+        {
+            naked                       ;
+            fld     real ptr [x]        ;
+            fstcw   word ptr 8[x]       ;
+            mov     AL,9[x]             ;
+            mov     DL,AL               ;
+            and     AL,0xC3             ;
+            or      AL,0x0C             ; // round to 0
+            mov     9[x],AL             ;
+            fldcw   word ptr 8[x]       ;
+            frndint                     ;
+            mov     9[x],DL             ;
+            fldcw   word ptr 8[x]       ;
+            ret                         ;
+        }
+    }
     else
         return core.stdc.math.truncl(x);
 }
@@ -2590,7 +2671,7 @@ real trunc(real x) @trusted nothrow
  */
 real remainder(real x, real y) @trusted nothrow
 {
-    version (Win64)
+    version (CRuntime_Microsoft)
     {
         int n;
         return remquo(x, y, n);

@@ -596,7 +596,6 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $D(fread
                         _name, "'"));
     }
 
-    version(Win64) {} else
     unittest
     {
         auto deleteme = testFilename();
@@ -630,7 +629,6 @@ Throws: $(D Exception) if the file is not opened.
         }
     }
 
-    version(Win64) {} else
     unittest
     {
         auto deleteme = testFilename();

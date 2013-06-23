@@ -37,7 +37,7 @@ CFLAGS=/O2 /nologo /I"$(VCDIR)\INCLUDE" /I"$(SDKDIR)\Include"
 
 ## Flags for dmd D compiler
 
-DFLAGS=-m$(MODEL) -O -release -w -d -property
+DFLAGS=-op -m$(MODEL) -O -release -w -d -property
 #DFLAGS=-m$(MODEL) -unittest -g -d
 #DFLAGS=-m$(MODEL) -unittest -cov -g -d
 
@@ -69,7 +69,7 @@ DOC=..\..\html\d\phobos
 ## Location of druntime tree
 
 DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\lib\druntime64.lib
+DRUNTIMELIB=$(DRUNTIME)\lib\druntime$(MODEL).lib
 
 ## Zlib library
 
@@ -447,7 +447,7 @@ html : $(DOCS)
 
 $(ZLIB): $(SRC_ZLIB)
 	cd etc\c\zlib
-	$(MAKE) -f win$(MODEL).mak zlib$(MODEL).lib "CC=\$(CC)"\"" "LIB=\$(AR)"\"" "VCDIR=$(VCDIR)"
+	$(MAKE) -f win64.mak MODEL=$(MODEL) zlib$(MODEL).lib "CC=\$(CC)"\"" "LIB=\$(AR)"\"" "VCDIR=$(VCDIR)"
 	cd ..\..\..
 
 ################## DOCS ####################################
@@ -777,7 +777,7 @@ phobos.zip : zip
 
 clean:
 	cd etc\c\zlib
-	$(MAKE) -f win$(MODEL).mak clean
+	$(MAKE) -f win64.mak clean
 	cd ..\..\..
 	del $(DOCS)
 	del $(UNITTEST_OBJS) unittest.obj unittest.exe
