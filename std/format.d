@@ -1560,16 +1560,9 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
         return;
     }
-<<<<<<< HEAD
-    enforceEx!FormatException(
-            std.algorithm.find("fgFGaAeEs", fs.spec).length,
-            "floating");
-    version (CRuntime_Microsoft)
-=======
     enforceFmt(std.algorithm.find("fgFGaAeEs", fs.spec).length,
         "floating");
-    version (Win64)
->>>>>>> 201edf4c8055ca0ac0079b9a8b711b68668c7974
+    version (CRuntime_Microsoft)
     {
         if (isnan(val)) // snprintf writes 1.#QNAN
         {
