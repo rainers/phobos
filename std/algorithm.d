@@ -465,16 +465,33 @@ private struct MapResult(alias fun, Range)
         alias length opDollar;
     }
 
-    static if (!isInfinite!R && hasSlicing!R)
+    static if (hasSlicing!R)
     {
         static if (is(typeof(_input[ulong.max .. ulong.max])))
-            private alias ulong opSlice_t;
+            private alias opSlice_t = ulong;
         else
-            private alias uint opSlice_t;
+            private alias opSlice_t = uint;
 
-        auto opSlice(opSlice_t lowerBound, opSlice_t upperBound)
+        static if (hasLength!R)
         {
-            return typeof(this)(_input[lowerBound..upperBound]);
+            auto opSlice(opSlice_t low, opSlice_t high)
+            {
+                return typeof(this)(_input[low .. high]);
+            }
+        }
+        else static if (is(typeof(_input[opSlice_t.max .. $])))
+        {
+            struct DollarToken{}
+            enum opDollar = DollarToken.init;
+            auto opSlice(opSlice_t low, DollarToken)
+            {
+                return typeof(this)(_input[low .. $]);
+            }
+
+            auto opSlice(opSlice_t low, opSlice_t high)
+            {
+                return this[low .. $].take(high - low);
+            }
         }
     }
 
@@ -611,6 +628,15 @@ unittest
     const floatEnd = 1.0;
     const floatStep = 0.02;
     static assert(__traits(compiles, map!(i => i)(iota(floatBegin, floatEnd, floatStep))));
+}
+unittest
+{
+    //slicing infinites
+    auto rr = iota(0, 5).cycle().map!"a * a"();
+    alias RR = typeof(rr);
+    static assert(hasSlicing!RR);
+    rr = rr[6 .. $]; //Advances 1 cycle and 1 unit
+    assert(equal(rr[0 .. 5], [1, 4, 9, 16, 0]));
 }
 
 /**
@@ -6027,7 +6053,16 @@ int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSom
         static if (typeof(r1[0]).sizeof == 1)
         {
             immutable len = min(r1.length, r2.length);
-            immutable result = std.c.string.memcmp(r1.ptr, r2.ptr, len);
+            immutable result = __ctfe ?
+                {
+                    foreach (i; 0 .. len)
+                    {
+                        if (r1[i] != r2[i])
+                            return threeWayInt(r1[i], r2[i]);
+                    }
+                    return 0;
+                }()
+                : std.c.string.memcmp(r1.ptr, r2.ptr, len);
             if (result) return result;
         }
         else
@@ -9949,10 +9984,7 @@ assert(!all!"a & 1"([1, 2, 3, 5, 7, 9]));
 bool all(alias pred, R)(R range)
 if (isInputRange!R && is(typeof(unaryFun!pred(range.front))))
 {
-    // dmd @@@BUG9578@@@ workaround
-    // return find!(not!(unaryFun!pred))(range).empty;
-    bool notPred(ElementType!R a) { return !unaryFun!pred(a); }
-    return find!notPred(range).empty;
+    return find!(not!(unaryFun!pred))(range).empty;
 }
 
 unittest
