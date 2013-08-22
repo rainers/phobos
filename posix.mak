@@ -352,10 +352,6 @@ $(ROOT)/unittest/%$(DOTEXE) : $(ROOT)/unittest/test_runner
 	$(QUIET)$(RUN) $< $(call moduleName,$*)
 # succeeded, render the file new again
 #	@touch $@
-else
-	$(QUIET)$(DMD) $(subst /,$(PATHSEP), $(DFLAGS) -unittest $(LINKOPTS) "-of$@" \
-	 	$(ROOT)/emptymain.d $< ) || $(RM) $@
-endif
 
 $(ROOT)/unittest/testall$(DOTEXE) : $(D_FILES) $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
