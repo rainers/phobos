@@ -112,7 +112,7 @@ else
 endif
 
 # Set CFLAGS
-CFLAGS :=
+CFLAGS=
 ifneq (,$(filter cc% gcc% clang% icc% egcc%, $(CC)))
 	CFLAGS += $(MODEL_FLAG) $(PIC)
 	ifeq ($(BUILD),debug)
@@ -129,7 +129,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property $(MODEL_FLAG) $(PIC)
+DFLAGS=-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -225,7 +225,7 @@ EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
-	processinit uni uni_tab)
+	processinit uni uni_tab unicode_tables)
 
 # Aggregate all D modules relevant to this build
 D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES) $(STD_DIGEST_MODULES)
@@ -302,7 +302,7 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(MAKEFILE)
 dll : $(ROOT)/libphobos2.so
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
-	ln -sf $(notdir $(LIBSO)) $@ 
+	ln -sf $(notdir $(LIBSO)) $@
 
 $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
@@ -319,19 +319,37 @@ endif
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
-$(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
-	@echo Testing $@
-ifeq (,$(findstring win,$(OS)))
-	@if $(GREP) -q unittest $< ; then \
-	echo Testing $@ && \
-	@$(subst /,\\,$(DMD) $(DFLAGS) -unittest $(LINKOPTS) "-of$@" $(ROOT)/emptymain.d $< ) \
-	$(RUN) $@ ; \
-	else echo Skipping $< ; \
-	fi
+UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
+$(UT_D_OBJS): $(ROOT)/unittest/%.o: $(D_FILES)
+	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
+
+ifneq (linux,$(OS))
+
+$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) -defaultlib= -debuglib= -L-lcurl
+
+else
+
+UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
+
+$(UT_LIBSO): override PIC:=-fPIC
+$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) -defaultlib= -debuglib= -L-lcurl
+
+$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
+	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
+
+endif
+
+# macro that returns the module name given the src path
+moduleName=$(subst /,.,$(1))
+
+$(ROOT)/unittest/%$(DOTEXE) : $(ROOT)/unittest/test_runner
+	@mkdir -p $(dir $@)
 # make the file very old so it builds and runs again if it fails
 #	@touch -t 197001230123 $@
 # run unittest in its own directory
-	$(QUIET)$(RUN) $@
+	$(QUIET)$(RUN) $< $(call moduleName,$*)
 # succeeded, render the file new again
 #	@touch $@
 else
@@ -359,13 +377,6 @@ endif
 # Disable implicit rule
 %$(DOTEXE) : %$(DOTOBJ)
 
-$(ROOT)/emptymain.d : $(ROOT)/.directory
-ifeq (cmd.exe,$(findstring $(SHELL),cmd.exe))
-	@echo void main(){} >$@
-else
-	@echo 'void main(){}' >$@
-endif
-
 $(ROOT)/.directory :
 	$(MKDIR) -p $(ROOT) || exists $(ROOT)
 	touch $@
@@ -387,7 +398,7 @@ install2 : release
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
 ifeq (,$(findstring win,$(OS)))
-$(DRUNTIME) :
+$(DRUNTIME) $(DRUNTIMESO) :
 	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL)
 endif
 
