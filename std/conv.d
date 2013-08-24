@@ -1308,7 +1308,7 @@ fit in the narrower type.
  */
 T toImpl(T, S)(S value)
     if (!isImplicitlyConvertible!(S, T) &&
-        (isNumeric!S || isSomeChar!S) && !is(S == enum) &&
+        (isNumeric!S || isSomeChar!S) &&
         (isNumeric!T || isSomeChar!T) && !is(T == enum))
 {
     enum sSmallest = mostNegative!S;
@@ -1358,6 +1358,29 @@ T toImpl(T, S)(S value)
 
     char from4 = 'A';
     dchar to4 = to!dchar(from4);
+}
+
+unittest
+{
+    // Narrowing conversions from enum -> integral should be allowed, but they
+    // should throw at runtime if the enum value doesn't fit in the target
+    // type.
+    enum E1 : ulong { A = 1, B = 1UL<<48 }
+    assert(to!int(E1.A) == 1);
+    assertThrown!ConvOverflowException(to!int(E1.B)); // E1.B overflows int
+
+    enum E2 : long { A = -1L<<48, B = -1<<31, C = 1<<31 }
+    assertThrown!ConvOverflowException(to!int(E2.A)); // E2.A overflows int
+    assertThrown!ConvOverflowException(to!uint(E2.B)); // E2.B overflows uint
+    assert(to!int(E2.B) == -1<<31); // but does not overflow int
+    assert(to!int(E2.C) == 1<<31);  // E2.C does not overflow int
+
+    enum E3 : int { A = -1, B = 1, C = 255 }
+    assertThrown!ConvOverflowException(to!ubyte(E3.A));
+    assert(to!byte(E3.A) == -1);
+    assert(to!byte(E3.B) == 1);
+    assert(to!ubyte(E3.C) == 255);
+    assertThrown!ConvOverflowException(to!byte(E3.C));
 }
 
 /**
@@ -1713,7 +1736,8 @@ a ConvException is thrown.
 Enums with floating-point or string base types are not supported.
 */
 T toImpl(T, S)(S value)
-    if (is(T == enum) && !is(S == enum) && is(S : OriginalType!T)
+    if (is(T == enum) && !is(S == enum)
+        && is(typeof(value == OriginalType!T.init))
         && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
 {
     foreach (Member; EnumMembers!T)
@@ -4088,4 +4112,12 @@ unittest
         static assert(is(typeof(signed(cast(const T)1)) == long));
         static assert(is(typeof(signed(cast(immutable T)1)) == long));
     }
+}
+
+unittest
+{
+    // issue 10874
+    enum Test { a = 0 }
+    ulong l = 0;
+    auto t = l.to!Test;
 }
