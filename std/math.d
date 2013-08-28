@@ -1822,6 +1822,7 @@ L_was_nan:
     }
 }
 
+version(CRuntime_Microsoft) {} else
 unittest
 {
     assert(exp2(0.5L)== SQRT2);

@@ -182,8 +182,10 @@ endif
 ifeq (,$(findstring win,$(OS)))
 	LIB = $(ROOT)/libphobos2.a
 	LIBSO = $(ROOT)/$(SONAME).0
+	LDOPT_CURL=-L-lcurl
 else
 	LIB = $(ROOT)/phobos.lib
+	LDOPT_CURL=curl.lib -L/noco
 endif
 
 ################################################################################
@@ -319,14 +321,14 @@ endif
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
-UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
-$(UT_D_OBJS): $(ROOT)/unittest/%.o: $(D_FILES)
+UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix $(DOTOBJ),$(D_MODULES)))
+$(UT_D_OBJS): $(ROOT)/unittest/%$(DOTOBJ): $(D_FILES)
 	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
 
 ifneq (linux,$(OS))
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) -defaultlib= -debuglib= -L-lcurl
+$(ROOT)/unittest/test_runner$(DOTEXE): $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) -defaultlib= -debuglib= $(LDOPT_CURL)
 
 else
 
@@ -334,9 +336,9 @@ UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
 $(UT_LIBSO): override PIC:=-fPIC
 $(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) -defaultlib= -debuglib= -L-lcurl
+	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) -defaultlib= -debuglib= $(LDOPT_CURL)
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
+$(ROOT)/unittest/test_runner$(DOTEXE): $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
 
 endif
@@ -344,8 +346,8 @@ endif
 # macro that returns the module name given the src path
 moduleName=$(subst /,.,$(1))
 
-$(ROOT)/unittest/%$(DOTEXE) : $(ROOT)/unittest/test_runner
-	@mkdir -p $(dir $@)
+$(ROOT)/unittest/%$(DOTEXE) : $(ROOT)/unittest/test_runner$(DOTEXE)
+	@mkdir -p $(dir $@).
 # make the file very old so it builds and runs again if it fails
 #	@touch -t 197001230123 $@
 # run unittest in its own directory
@@ -353,11 +355,10 @@ $(ROOT)/unittest/%$(DOTEXE) : $(ROOT)/unittest/test_runner
 # succeeded, render the file new again
 #	@touch $@
 
-$(ROOT)/unittest/testall$(DOTEXE) : $(D_FILES) $(LIB) $(ROOT)/emptymain.d
+$(ROOT)/unittest/testall$(DOTEXE) : $(D_FILES) $(LIB)
 	@echo Testing $@
 ifeq (,$(findstring win,$(OS)))
-	$(subst /,$(PATHSEP),$(DMD) $(DFLAGS) $(LINKOPTS) "-of$@" \
-	 	$(ROOT)/emptymain.d $(D_FILES) )
+	$(subst /,$(PATHSEP),$(DMD) $(DFLAGS) $(LINKOPTS) "-of$@" -main $(D_FILES) )
 	@$(RUN) $@
 # make the file very old so it builds and runs again if it fails
 #	@touch -t 197001230123 $@
@@ -367,7 +368,7 @@ ifeq (,$(findstring win,$(OS)))
 #	@touch $@
 else
 	$(DMD) $(subst /,$(PATHSEP), $(DFLAGS) $(LINKOPTS) "-of$@" \
-	 	$(ROOT)/emptymain.d $(D_FILES) ) || $(RM) $@
+	 	-main $(D_FILES) ) || $(RM) $@
 endif	
 
 # Disable implicit rule
