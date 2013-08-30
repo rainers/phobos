@@ -1514,15 +1514,20 @@ $(D Range) that locks the file and allows fast writing to it.
 
         ~this()
         {
-            FUNLOCK(fps);
-            fps = null;
-            handle = null;
+            if(fps)
+            {
+                FUNLOCK(fps);
+                fps = null;
+                handle = null;
+            }
         }
 
         this(this)
         {
-            enforce(fps);
-            FLOCK(fps);
+            if(fps)
+            {
+                FLOCK(fps);
+            }
         }
 
         /// Range primitive implementations.
@@ -1986,6 +1991,19 @@ unittest
         assert(cast(char[]) std.file.read(deleteme) ==
                 "A\nB\nA\nB\nA\nB\nA\nB\n");
 }
+
+unittest
+{
+    static auto useInit(T)(T ltw)
+    {
+        T val;
+        val = ltw;
+        val = T.init;
+        return val;
+    }
+    useInit(stdout.lockingTextWriter());
+}
+
 
 /***********************************
  * If the first argument $(D args[0]) is a $(D FILE*), use

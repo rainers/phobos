@@ -1511,7 +1511,7 @@ C1[] chompPrefix(C1, C2)(C1[] str, C2[] delimiter) @safe pure
     ends with $(D "\r\n"), then both are removed. If $(D str) is empty, then
     then it is returned unchanged.
  +/
-S chop(S)(S str)
+S chop(S)(S str) @safe pure
     if (isSomeString!S)
 {
     if (str.empty)
@@ -1526,7 +1526,7 @@ S chop(S)(S str)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(chop("hello world") == "hello worl");
     assert(chop("hello world\n") == "hello world");
@@ -1562,7 +1562,7 @@ unittest
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
 {
     alias typeof(s[0]) C;
@@ -1597,7 +1597,7 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
 {
     alias typeof(s[0]) C;
@@ -1632,7 +1632,7 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ') @trusted
     is the character that will be used to fill up the space in the field that
     $(D s) doesn't fill.
   +/
-S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted
+S center(S)(S s, size_t width, dchar fillChar = ' ') @trusted pure
     if (isSomeString!S)
 {
     alias typeof(s[0]) C;
@@ -1951,7 +1951,9 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
                                         const(C2)[] toRemove = null) @safe
     if (isSomeChar!C1 && isSomeChar!C2)
 {
-    return translateImpl(str, transTable, toRemove);
+    auto buffer = appender!(C1[])();
+    translateImpl(str, transTable, toRemove, buffer);
+    return buffer.data;
 }
 
 ///
@@ -2019,7 +2021,9 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
                                            const(C2)[] toRemove = null) @safe
     if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
 {
-    return translateImpl(str, transTable, toRemove);
+    auto buffer = appender!(C1[])();
+    translateImpl(str, transTable, toRemove, buffer);
+    return buffer.data;
 }
 
 unittest
@@ -2071,12 +2075,58 @@ unittest
     });
 }
 
-private auto translateImpl(C1, T, C2)(C1[] str,
-                                      T transTable,
-                                      const(C2)[] toRemove) @trusted
-{
-    auto retval = appender!(C1[])();
+/++
+    This is an overload of $(D translate) which takes an existing buffer to write the contents to.
 
+    Params:
+        str        = The original string.
+        transTable = The AA indicating which characters to replace and what to
+                     replace them with.
+        toRemove   = The characters to remove from the string.
+        buffer     = An output range to write the contents to.
+  +/
+void translate(C1, C2 = immutable char, Buffer)(C1[] str,
+                                        dchar[dchar] transTable,
+                                        const(C2)[] toRemove,
+                                        Buffer buffer) @safe
+    if (isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(Buffer, C1))
+{
+    translateImpl(str, transTable, toRemove, buffer);
+}
+
+///
+unittest
+{
+    dchar[dchar] transTable1 = ['e' : '5', 'o' : '7', '5': 'q'];
+    auto buffer = appender!(dchar[])();
+    translate("hello world", transTable1, null, buffer);
+    assert(buffer.data == "h5ll7 w7rld");
+
+    buffer.clear();
+    translate("hello world", transTable1, "low", buffer);
+    assert(buffer.data == "h5 rd");
+
+    buffer.clear();
+    string[dchar] transTable2 = ['e' : "5", 'o' : "orange"];
+    translate("hello world", transTable2, null, buffer);
+    assert(buffer.data == "h5llorange worangerld");
+}
+
+/++ Ditto +/
+void translate(C1, S, C2 = immutable char, Buffer)(C1[] str,
+                                                   S[dchar] transTable,
+                                                   const(C2)[] toRemove,
+                                                   Buffer buffer) @safe
+    if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2 && isOutputRange!(Buffer, S))
+{
+    translateImpl(str, transTable, toRemove, buffer);
+}
+
+private void translateImpl(C1, T, C2, Buffer)(C1[] str,
+                                      T transTable,
+                                      const(C2)[] toRemove,
+                                      Buffer buffer) @trusted
+{
     bool[dchar] removeTable;
 
     foreach (dchar c; toRemove)
@@ -2090,14 +2140,11 @@ private auto translateImpl(C1, T, C2)(C1[] str,
         auto newC = c in transTable;
 
         if (newC)
-            retval.put(*newC);
+            buffer.put(*newC);
         else
-            retval.put(c);
+            buffer.put(c);
     }
-
-    return retval.data;
 }
-
 
 /++
     This is an $(I $(RED ASCII-only)) overload of $(LREF _translate). It
@@ -2152,15 +2199,9 @@ body
             ++count;
     }
 
-    auto retval = new char[count];
-    size_t i = 0;
-    foreach (char c; str)
-    {
-        if (!remTable[c])
-            retval[i++] = transTable[c];
-    }
-
-    return cast(C[])(retval);
+    auto buffer = new char[count];
+    translateImplAscii(str, transTable, remTable, buffer, toRemove);
+    return cast(C[])(buffer);
 }
 
 
@@ -2235,6 +2276,65 @@ unittest
     });
 }
 
+/++
+    This is an $(I $(RED ASCII-only)) overload of $(D translate) which takes an existing buffer to write the contents to.
+
+    Params:
+        str        = The original string.
+        transTable = The string indicating which characters to replace and what
+                     to replace them with. It is generated by $(LREF makeTrans).
+        toRemove   = The characters to remove from the string.
+        buffer     = An output range to write the contents to.
+  +/
+void translate(C = immutable char, Buffer)(in char[] str, in char[] transTable, in char[] toRemove, Buffer buffer) @trusted nothrow
+    if (is(Unqual!C == char) && isOutputRange!(Buffer, char))
+in
+{
+    assert(transTable.length == 256);
+}
+body
+{
+    bool[256] remTable = false;
+
+    foreach (char c; toRemove)
+        remTable[c] = true;
+
+    translateImplAscii(str, transTable, remTable, buffer, toRemove);
+}
+
+///
+unittest
+{
+    auto buffer = appender!(char[])();
+    auto transTable1 = makeTrans("eo5", "57q");
+    translate("hello world", transTable1, null, buffer);
+    assert(buffer.data == "h5ll7 w7rld");
+
+    buffer.clear();
+    translate("hello world", transTable1, "low", buffer);
+    assert(buffer.data == "h5 rd");
+}
+
+private void translateImplAscii(C = immutable char, Buffer)(in char[] str, in char[] transTable, ref bool[256] remTable, Buffer buffer, in char[] toRemove = null) @trusted nothrow
+{
+    static if (isOutputRange!(Buffer, char))
+    {
+        foreach (char c; str)
+        {
+            if (!remTable[c])
+                buffer.put(transTable[c]);
+        }
+    }
+    else
+    {
+        size_t i = 0;
+        foreach (char c; str)
+        {
+            if (!remTable[c])
+                buffer[i++] = transTable[c];
+        }
+    }
+}
 
 /*****************************************************
  * Format arguments into a string.
@@ -2474,7 +2574,7 @@ deprecated unittest
  *  to be more like regular expression character classes.
  */
 
-bool inPattern(S)(dchar c, in S pattern) if (isSomeString!S)
+bool inPattern(S)(dchar c, in S pattern) @safe pure if (isSomeString!S)
 {
     bool result = false;
     int range = 0;
@@ -2540,7 +2640,7 @@ unittest
  * See if character c is in the intersection of the patterns.
  */
 
-bool inPattern(S)(dchar c, S[] patterns) if (isSomeString!S)
+bool inPattern(S)(dchar c, S[] patterns) @safe pure if (isSomeString!S)
 {
     foreach (string pattern; patterns)
     {
@@ -2557,7 +2657,7 @@ bool inPattern(S)(dchar c, S[] patterns) if (isSomeString!S)
  * Count characters in s that match pattern.
  */
 
-size_t countchars(S, S1)(S s, in S1 pattern) if (isSomeString!S && isSomeString!S1)
+size_t countchars(S, S1)(S s, in S1 pattern) @safe pure if (isSomeString!S && isSomeString!S1)
 {
     size_t count;
     foreach (dchar c; s)
@@ -2583,7 +2683,7 @@ unittest
  * Return string that is s with all characters removed that match pattern.
  */
 
-S removechars(S)(S s, in S pattern) if (isSomeString!S)
+S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
 {
     Unqual!(typeof(s[0]))[] r;
     bool changed = false;
@@ -2604,7 +2704,10 @@ S removechars(S)(S s, in S pattern) if (isSomeString!S)
             std.utf.encode(r, c);
         }
     }
-    return (changed ? cast(S) r : s);
+    if (changed)
+        return r;
+    else
+        return s;
 }
 
 unittest
