@@ -3052,6 +3052,12 @@ Returns:
  The members are arranged in the same order as declared in $(D E).
 
 Note:
+ An enum can have multiple members which have the same value. If you want
+ to use EnumMembers to e.g. generate switch cases at compile-time,
+ you should use the $(XREF typetuple, NoDuplicates) template to avoid
+ generating duplicate switch cases.
+
+Note:
  Returned values are strictly typed with $(D E). Thus, the following code
  does not work without the explicit cast:
 --------------------
@@ -5694,7 +5700,7 @@ alias std.conv.unsigned unsigned;
 Returns the most negative value of the numeric type T.
 */
 template mostNegative(T)
-    if(isNumeric!T || isSomeChar!T)
+    if(isNumeric!T || isSomeChar!T || isBoolean!T)
 {
     static if (is(typeof(T.min_normal)))
         enum mostNegative = -T.max;
@@ -5709,8 +5715,9 @@ unittest
     static assert(mostNegative!float == -float.max);
     static assert(mostNegative!double == -double.max);
     static assert(mostNegative!real == -real.max);
+    static assert(mostNegative!bool == false);
 
-    foreach(T; TypeTuple!(byte, short, int, long))
+    foreach(T; TypeTuple!(bool, byte, short, int, long))
         static assert(mostNegative!T == T.min);
 
     foreach(T; TypeTuple!(ubyte, ushort, uint, ulong, char, wchar, dchar))
