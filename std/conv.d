@@ -2670,7 +2670,10 @@ unittest
     ld = parse!real(s);
     assert(s.empty);
     x = *cast(longdouble *)&ld;
-    ld1 = strtold("0x1.FFFFFFFFFFFFFFFEp-16382", null);
+    version (Win64)
+        ld1 = 0x1.FFFFFFFFFFFFFFFEp-16382L; // strtold currently mapped to strtod
+    else
+        ld1 = strtold("0x1.FFFFFFFFFFFFFFFEp-16382", null);
     x1 = *cast(longdouble *)&ld1;
     assert(x1 == x && ld1 == ld);
 

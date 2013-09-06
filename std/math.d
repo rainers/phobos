@@ -136,9 +136,13 @@ version(unittest)
 
         int ix;
         int iy;
-        ix = sprintf(bufx.ptr, "%.*Lg", ndigits, x);
+        version(Win64)
+            alias double real_t;
+        else
+            alias real real_t;
+        ix = sprintf(bufx.ptr, "%.*Lg", ndigits, cast(real_t) x);
+        iy = sprintf(bufy.ptr, "%.*Lg", ndigits, cast(real_t) y);
         assert(ix < bufx.length && ix > 0);
-        iy = sprintf(bufy.ptr, "%.*Lg", ndigits, y);
         assert(ix < bufy.length && ix > 0);
 
         return bufx[0 .. ix] == bufy[0 .. iy];

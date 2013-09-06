@@ -112,6 +112,8 @@ else version (MICROSOFT_STDIO)
         int _fgetwc_nolock(_iobuf*);
         void _lock_file(FILE*);
         void _unlock_file(FILE*);
+
+        int _setmode (int fd, int mode);
     }
     alias _fputc_nolock FPUTC;
     alias _fputwc_nolock FPUTWC;
@@ -120,6 +122,9 @@ else version (MICROSOFT_STDIO)
 
     alias _lock_file FLOCK;
     alias _unlock_file FUNLOCK;
+
+    enum _O_BINARY = 0x8000;
+    alias fileno _fileno;
 }
 else version (GCC_IO)
 {
@@ -524,8 +529,7 @@ $(D rawRead) always reads in binary mode on Windows.
     T[] rawRead(T)(T[] buffer)
     {
         enforce(buffer.length, "rawRead must take a non-empty buffer");
-        version(MICROSOFT_STDIO) {} else
-        version(Win32)
+        version(Windows)
         {
             immutable fd = ._fileno(_p.handle);
             immutable mode = ._setmode(fd, _O_BINARY);
@@ -571,7 +575,6 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $D(fread
  */
     void rawWrite(T)(in T[] buffer)
     {
-        version(MICROSOFT_STDIO) {} else
         version(Windows)
         {
             flush(); // before changing translation mode
