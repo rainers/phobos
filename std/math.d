@@ -3271,7 +3271,7 @@ long lrint(real x) @trusted pure nothrow
             {
                 naked;
                 fld     real ptr [RCX];
-                fistp   8[RSP];
+                fistp   qword ptr 8[RSP];
                 mov     RAX,8[RSP];
                 ret;
             }

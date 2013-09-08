@@ -176,7 +176,7 @@ ifeq (,$(findstring win,$(OS)))
 	LDOPT_CURL=-L-lcurl
 else
 	LIB = $(ROOT)/phobos.lib
-	LDOPT_CURL=curl.lib -L/noco
+	LDOPT_CURL=curl.lib
 endif
 
 ################################################################################
@@ -359,7 +359,7 @@ ifeq (,$(findstring win,$(OS)))
 #	@touch $@
 else
 	$(DMD) $(subst /,$(PATHSEP), $(DFLAGS) $(LINKOPTS) "-of$@" \
-	 	-main $(D_FILES) ) || $(RM) $@
+	 	-main $(D_FILES) $(OBJS) $(DRUNTIME) $(LINKDL) -defaultlib= -debuglib= $(LDOPT_CURL)) || $(RM) $@
 endif	
 
 # Disable implicit rule

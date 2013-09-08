@@ -1564,15 +1564,22 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         "floating");
     version (CRuntime_Microsoft)
     {
-        if (isnan(val)) // snprintf writes 1.#QNAN
+        double tval = val; // convert early to get "inf" in case of overflow
+        string s;
+        if (isnan(tval))
+            s = "nan"; // snprintf writes 1.#QNAN
+        else if (isInfinity(tval))
+            s = val >= 0 ? "inf" : "-inf"; // snprintf writes 1.#INF
+
+        if (s.length > 0) 
         {
           version(none)
           {
-            return formatValue(w, "nan", f);
+            return formatValue(w, s, f);
           }
           else  // FIXME:workaroun
           {
-            auto s = "nan"[0 .. f.precision < $ ? f.precision : $];
+            s = s[0 .. f.precision < $ ? f.precision : $];
             if (!f.flDash)
             {
                 // right align
@@ -1591,6 +1598,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
           }
         }
     }
+    else
+        alias val tval;
     if (fs.spec == 's') fs.spec = 'g';
     char[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
                      + 1 /*\0*/] sprintfSpec = void;
@@ -1613,7 +1622,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
             fs.width,
             // negative precision is same as no precision specified
             fs.precision == fs.UNSPECIFIED ? -1 : fs.precision,
-            val);
+            tval);
     enforceFmt(n >= 0,
         "floating point formatting failure");
     put(w, buf[0 .. strlen(buf.ptr)]);
@@ -3172,6 +3181,11 @@ unittest
         assert(stream.data == "1.67 -0XA.3D70A3D70A3D8P-3 nan",
                 stream.data);
     }
+    else version (CRuntime_Microsoft)
+    {
+        assert(stream.data == "1.67 -0X1.47AE14P+0 nan",
+                stream.data);
+    }
     else
     {
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
@@ -3197,7 +3211,10 @@ unittest
 
     formattedWrite(stream, "%a %A", 1.32, 6.78f);
     //formattedWrite(stream, "%x %X", 1.32);
-    assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
+    version (CRuntime_Microsoft)
+        assert(stream.data == "0x1.51eb85p+0 0X1.B1EB86P+2");
+    else
+        assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
     stream.clear();
 
     formattedWrite(stream, "%#06.*f",2,12.345);
@@ -5642,6 +5659,8 @@ unittest
     //else
     version (MinGW)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
+    else version (CRuntime_Microsoft)
+        assert(s == "1.67 -0X1.47AE14P+0 nan", s);
     else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan", s);
 
