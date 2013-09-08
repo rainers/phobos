@@ -1325,8 +1325,19 @@ the contents may well have changed).
         testTerm("bob\r\nmarge\r\nsteve\r\n", ["bob\r\n", "marge\r\n", "steve\r\n"],
             KeepTerminator.yes, "\r\n", false);
         testTerm("sue\r", ["sue\r"], KeepTerminator.yes, '\r', false);
+    }
 
-        auto file = File.tmpfile();
+    unittest
+    {
+        version(Win64)
+        {
+            /* the C function tmpfile doesn't seem to work, even when called from C */ 
+            auto deleteme = testFilename();
+            auto file = File(deleteme, "w+");
+            scope(success) std.file.remove(deleteme);
+        }
+        else
+            auto file = File.tmpfile();
         file.write("1\n2\n3\n");
 
         // bug 9599
