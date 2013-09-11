@@ -2736,6 +2736,13 @@ EOS";
     xml.parse();
 }
 
+unittest
+{
+    string s = `<tag attr="&quot;value&gt;" />`;
+    auto doc = new Document(s);
+    assert(doc.toString() == s);
+}
+
 /** The base class for exceptions thrown by this module */
 class XMLException : Exception { this(string msg) { super(msg); } }
 

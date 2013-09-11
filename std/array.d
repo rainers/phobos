@@ -23,12 +23,6 @@ Returns a newly-allocated dynamic array consisting of a copy of the
 input range, static array, dynamic array, or class or struct with an
 $(D opApply) function $(D r).  Note that narrow strings are handled as
 a special case in an overload.
-
-Example:
-----
-auto a = array([1, 2, 3, 4, 5][]);
-assert(a == [ 1, 2, 3, 4, 5 ]);
-----
  */
 ForeachType!Range[] array(Range)(Range r)
 if (isIterable!Range && !isNarrowString!Range)
@@ -72,6 +66,7 @@ if (isIterable!Range && !isNarrowString!Range)
     }
 }
 
+///
 @safe pure nothrow unittest
 {
     auto a = array([1, 2, 3, 4, 5][]);
@@ -305,16 +300,6 @@ without initializing its elements.  This can be a useful optimization if every
 element will be immediately initialized.  $(D T) may be a multidimensional
 array.  In this case sizes may be specified for any number of dimensions from 1
 to the number in $(D T).
-
-Examples:
----
-double[] arr = uninitializedArray!(double[])(100);
-assert(arr.length == 100);
-
-double[][] matrix = uninitializedArray!(double[][])(42, 31);
-assert(matrix.length == 42);
-assert(matrix[0].length == 31);
----
 */
 auto uninitializedArray(T, I...)(I sizes)
 if(allSatisfy!(isIntegral, I))
@@ -322,6 +307,7 @@ if(allSatisfy!(isIntegral, I))
     return arrayAllocImpl!(false, T, I)(sizes);
 }
 
+///
 unittest
 {
     double[] arr = uninitializedArray!(double[])(100);
