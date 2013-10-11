@@ -798,8 +798,11 @@ T toImpl(T, S)(S value)
     }
     else static if (isExactSomeString!S)
     {
-        // other string-to-string conversions always run decode/encode
-        return toStr!T(value);
+        // other string-to-string
+        //Use Appender directly instead of toStr, which also uses a formatedWrite
+        auto w = appender!T();
+        w.put(value);
+        return w.data;
     }
     else static if (isIntegral!S && !is(S == enum))
     {
@@ -892,45 +895,50 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     static T enumRep = to!T(__traits(allMembers, S)[I]);
 }
 
-/*@safe pure */unittest
+@safe pure unittest
 {
-    // string to string conversion
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-
-    alias TypeTuple!(char, wchar, dchar) Chars;
-    foreach (LhsC; Chars)
+    void dg()
     {
-        alias TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]) LhStrings;
-        foreach (Lhs; LhStrings)
+        // string to string conversion
+        debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
+        alias TypeTuple!(char, wchar, dchar) Chars;
+        foreach (LhsC; Chars)
         {
-            foreach (RhsC; Chars)
+            alias TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]) LhStrings;
+            foreach (Lhs; LhStrings)
             {
-                alias TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[])
-                    RhStrings;
-                foreach (Rhs; RhStrings)
+                foreach (RhsC; Chars)
                 {
-                    Lhs s1 = to!Lhs("wyda");
-                    Rhs s2 = to!Rhs(s1);
-                    //writeln(Lhs.stringof, " -> ", Rhs.stringof);
-                    assert(s1 == to!Lhs(s2));
+                    alias TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[])
+                        RhStrings;
+                    foreach (Rhs; RhStrings)
+                    {
+                        Lhs s1 = to!Lhs("wyda");
+                        Rhs s2 = to!Rhs(s1);
+                        //writeln(Lhs.stringof, " -> ", Rhs.stringof);
+                        assert(s1 == to!Lhs(s2));
+                    }
                 }
             }
         }
-    }
 
-    foreach (T; Chars)
-    {
-        foreach (U; Chars)
+        foreach (T; Chars)
         {
-            T[] s1 = to!(T[])("Hello, world!");
-            auto s2 = to!(U[])(s1);
-            assert(s1 == to!(T[])(s2));
-            auto s3 = to!(const(U)[])(s1);
-            assert(s1 == to!(T[])(s3));
-            auto s4 = to!(immutable(U)[])(s1);
-            assert(s1 == to!(T[])(s4));
+            foreach (U; Chars)
+            {
+                T[] s1 = to!(T[])("Hello, world!");
+                auto s2 = to!(U[])(s1);
+                assert(s1 == to!(T[])(s2));
+                auto s3 = to!(const(U)[])(s1);
+                assert(s1 == to!(T[])(s3));
+                auto s4 = to!(immutable(U)[])(s1);
+                assert(s1 == to!(T[])(s4));
+            }
         }
     }
+    dg();
+    assertCTFEable!dg;
 }
 
 @safe pure unittest
@@ -3701,30 +3709,22 @@ as $(D chunk)).
  */
 T* emplace(T)(T* chunk) @safe nothrow pure
 {
-    static assert(is(T* : void*), "Cannot emplace type " ~ T.stringof ~ " because it is qualified.");
+    static assert (is(T* : void*),
+        format("Cannot emplace a %s because it is qualified.", T.stringof));
 
-    static if (is(T == class))
-    {
-        *chunk = null;
-    }
-    else static if (isStaticArray!T)
-    {
-        //TODO: This can probably be optimized.
-        foreach(ref e; (*chunk)[])
-            emplace(()@trusted{return &e;}());
-    }
+    static assert (is(typeof({static T i;})),
+        format("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
+
+    static if (isAssignable!T && !hasElaborateAssign!T)
+        *chunk = T.init;
     else
     {
-        static assert(!is(T == struct) || is(typeof({static T i;})),
-            text("Cannot emplace because ", T.stringof, ".this() is annotated with @disable."));
-
-        static if (isAssignable!T && !hasElaborateAssign!T)
-            *chunk = T.init;
-        else
+        static immutable T i;
+        static void trustedMemcpy(T* chunk) @trusted nothrow pure
         {
-            static immutable T i;
-            ()@trusted{memcpy(chunk, &i, T.sizeof);}();
+            memcpy(chunk, &i, T.sizeof);
         }
+        trustedMemcpy(chunk);
     }
 
     return chunk;
@@ -3831,8 +3831,12 @@ as $(D chunk)).
 T* emplace(T, Args...)(T* chunk, Args args)
     if (!is(T == struct) && Args.length == 1)
 {
+    static assert (is(T* : void*),
+        format("Cannot emplace a %s because it is qualified.", T.stringof));
+
     static assert(is(typeof(*chunk = args[0])),
-        text("Don't know how to emplace a ", T.stringof, " with a ", Args[0].stringof, "."));
+        format("Don't know how to emplace a %s with a %s.", T.stringof, Args[0].stringof));
+
     //TODO FIXME: For static arrays, this uses the "postblit-then-destroy" sequence.
     //This means it will destroy unitialized data.
     //It needs to be fixed.
@@ -3881,7 +3885,8 @@ unittest
 T* emplace(T, Args...)(T* chunk, auto ref Args args)
     if (is(T == struct))
 {
-    static assert(is(T* : void*), "Cannot emplace type " ~ T.stringof ~ " because it is qualified.");
+    static assert (is(T* : void*),
+        format("Cannot emplace a %s because it is qualified.", T.stringof));
 
     static if (Args.length == 1 && is(Args[0] : T) &&
         is (typeof({T t = args[0];})) //Check for legal postblit
@@ -3921,11 +3926,11 @@ T* emplace(T, Args...)(T* chunk, auto ref Args args)
     {
         //We can't emplace. Try to diagnose a disabled postblit.
         static assert(!(Args.length == 1 && is(Args[0] : T)),
-            "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
+            format("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
 
         //We can't emplace.
         static assert(false,
-            "Don't know how to emplace a " ~ T.stringof ~ " with " ~ Args[].stringof);
+            format("Don't know how to emplace a %s with %s.", T.stringof, Args[].stringof));
     }
 
     return chunk;
@@ -3946,10 +3951,11 @@ private void emplaceInitializer(T)(T* chunk)
 }
 private void emplacePostblitter(T, Arg)(ref T chunk, auto ref Arg arg)
 {
-    static assert(is(Arg : T), "emplace internal error: " ~ T.stringof ~ " " ~ Arg.stringof);
+    static assert(is(Arg : T),
+        format("emplace internal error: %s %s", T.stringof, Arg.stringof));
 
     static assert(is(typeof({T t = arg;})),
-        "struct " ~ T.stringof ~ " is not emplaceable because its copy is annotated with @disable");
+        format("Cannot emplace a %1$s because %1$s.this(this) is annotated with @disable.", T.stringof));
 
     static if (isAssignable!T && !hasElaborateAssign!T)
         chunk = arg;
@@ -3963,7 +3969,7 @@ private deprecated("Using static opCall for emplace is deprecated. Plase use emp
 void emplaceOpCaller(T, Args...)(T* chunk, auto ref Args args)
 {
     static assert (is(typeof({T t = T.opCall(args);})),
-        T.stringof ~ ".opCall does not return adequate data for construction.");
+        format("%s.opCall does not return adequate data for construction.", T.stringof));
     emplace(chunk, chunk.opCall(args));
 }
 

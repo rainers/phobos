@@ -2892,15 +2892,20 @@ unittest
  */
 template hasElaborateAssign(S)
 {
+    static assert(isRvalueAssignable!S || isLvalueAssignable!S,
+        S.stringof ~ " is neither r- nor lvalue assignable.");
+
     static if(isStaticArray!S && S.length)
     {
         enum bool hasElaborateAssign = hasElaborateAssign!(typeof(S.init[0]));
     }
     else static if(is(S == struct))
     {
-        enum hasElaborateAssign = is(typeof(S.init.opAssign(rvalueOf!S))) ||
-                                  is(typeof(S.init.opAssign(lvalueOf!S))) ||
-            anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
+        static if(is(typeof(S.init.opAssign(rvalueOf!S))) ||
+                  is(typeof(S.init.opAssign(lvalueOf!S))))
+            enum hasElaborateAssign = true;
+      else
+            enum hasElaborateAssign = anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
     }
     else
     {
@@ -2914,7 +2919,8 @@ unittest
 
     static struct S  { void opAssign(S) {} }
     static assert( hasElaborateAssign!S);
-    static assert(!hasElaborateAssign!(const(S)));
+    static assert(!__traits(compiles, hasElaborateAssign!(const S)));
+    static assert(!__traits(compiles, hasElaborateAssign!(shared S)));
 
     static struct S1 { void opAssign(ref S1) {} }
     static struct S2 { void opAssign(int) {} }
@@ -2948,8 +2954,8 @@ unittest
     static struct S9 { this(this) {}                             void opAssign(int) {} }
     static struct S10 { ~this() { } }
     static assert( hasElaborateAssign!S6);
-    static assert(!hasElaborateAssign!S7);
-    static assert(!hasElaborateAssign!S8);
+    static assert(!__traits(compiles, hasElaborateAssign!S7));
+    static assert(!__traits(compiles, hasElaborateAssign!S8));
     static assert( hasElaborateAssign!S9);
     static assert( hasElaborateAssign!S10);
     static struct SS6 { S6 s; }
@@ -2957,8 +2963,10 @@ unittest
     static struct SS8 { S8 s; }
     static struct SS9 { S9 s; }
     static assert( hasElaborateAssign!SS6);
-    static assert( hasElaborateAssign!SS7);
-    static assert( hasElaborateAssign!SS8);
+    /+ Disabled because of @@@BUG11202@@@
+    static assert(!__traits(compiles, hasElaborateAssign!SS7));
+    static assert(!__traits(compiles, hasElaborateAssign!SS8));
+    +/
     static assert( hasElaborateAssign!SS9);
 }
 
@@ -3840,41 +3848,45 @@ unittest
 Returns $(D true) iff a value of type $(D Rhs) can be assigned to a variable of
 type $(D Lhs).
 
+$(D isAssignable) returns whether both an lvalue and rvalue can be assigned.
+
 If you omit $(D Rhs), $(D isAssignable) will check identity assignable of $(D Lhs).
-
-Examples:
----
-static assert(isAssignable!(long, int));
-static assert(!isAssignable!(int, long));
-static assert( isAssignable!(const(char)[], string));
-static assert(!isAssignable!(string, char[]));
-
-// int is assignable to int
-static assert( isAssignable!int);
-
-// immutable int is not assinable to immutable int
-static assert(!isAssignable!(immutable int));
----
 */
-template isAssignable(Lhs, Rhs = Lhs)
-{
-    enum bool isAssignable = is(typeof({
-        Lhs l = void;
-        void f(Rhs r) { l = r; }
-        return l;
-    }));
-}
+enum isAssignable(Lhs, Rhs = Lhs) = isRvalueAssignable!(Lhs, Rhs) && isLvalueAssignable!(Lhs, Rhs);
 
+///
 unittest
 {
     static assert( isAssignable!(long, int));
-    static assert( isAssignable!(const(char)[], string));
-
     static assert(!isAssignable!(int, long));
+    static assert( isAssignable!(const(char)[], string));
     static assert(!isAssignable!(string, char[]));
 
-    static assert(!isAssignable!(immutable(int), int));
-    static assert( isAssignable!(int, immutable(int)));
+    // int is assignable to int
+    static assert( isAssignable!int);
+
+    // immutable int is not assinable to immutable int
+    static assert(!isAssignable!(immutable int));
+}
+
+// ditto
+private enum isRvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lhs = rvalueOf!Rhs);
+
+// ditto
+private enum isLvalueAssignable(Lhs, Rhs = Lhs) = __traits(compiles, lvalueOf!Lhs = lvalueOf!Rhs);
+
+unittest
+{
+    static assert(!isAssignable!(immutable int, int));
+    static assert( isAssignable!(int, immutable int));
+
+    static assert(!isAssignable!(inout int, int));
+    static assert( isAssignable!(int, inout int));
+    static assert(!isAssignable!(inout int));
+
+    static assert( isAssignable!(shared int, int));
+    static assert( isAssignable!(int, shared int));
+    static assert( isAssignable!(shared int));
 
     struct S { @disable this(); this(int n){} }
     static assert( isAssignable!(S, S));
@@ -3892,17 +3904,14 @@ unittest
     struct S4 { void opAssign(int); }
     static assert( isAssignable!(S4, S4));
     static assert( isAssignable!(S4, int));
-    static assert( isAssignable!(S4, immutable(int)));
+    static assert( isAssignable!(S4, immutable int));
 
     struct S5 { @disable this(); @disable this(this); }
     struct S6 { void opAssign(in ref S5); }
-    static assert( isAssignable!(S6, S5));
-    static assert( isAssignable!(S6, immutable(S5)));
-}
-unittest
-{
-    static assert( isAssignable!int);
-    static assert(!isAssignable!(immutable int));
+    static assert(!isAssignable!(S6, S5));
+    static assert(!isRvalueAssignable!(S6, S5));
+    static assert( isLvalueAssignable!(S6, S5));
+    static assert( isLvalueAssignable!(S6, immutable S5));
 }
 
 
