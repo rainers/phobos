@@ -25,8 +25,8 @@ import std.algorithm, std.ascii, std.bitmanip, std.conv,
     std.exception, std.range,
     std.system, std.traits, std.typetuple,
     std.utf;
-version (Win64) {
-    import std.math : isnan;
+version (CRuntime_Microsoft) {
+    import std.math : isnan, isInfinity;
 }
 version(unittest) {
     import std.math;
