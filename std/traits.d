@@ -4,6 +4,127 @@
  * Templates with which to extract information about types and symbols at
  * compile time.
  *
+ * <script type="text/javascript">inhibitQuickIndex = 1</script>
+ *
+ * $(BOOKTABLE ,
+ * $(TR $(TH Category) $(TH Templates))
+ * $(TR $(TD Symbol Name _traits) $(TD
+ *           $(LREF packageName)
+ *           $(LREF moduleName)
+ *           $(LREF fullyQualifiedName)
+ * ))
+ * $(TR $(TD Function _traits) $(TD
+ *           $(LREF ReturnType)
+ *           $(LREF ParameterTypeTuple)
+ *           $(LREF arity)
+ *           $(LREF ParameterStorageClassTuple)
+ *           $(LREF ParameterIdentifierTuple)
+ *           $(LREF ParameterDefaultValueTuple)
+ *           $(LREF functionAttributes)
+ *           $(LREF isSafe)
+ *           $(LREF isUnsafe)
+ *           $(LREF functionLinkage)
+ *           $(LREF variadicFunctionStyle)
+ *           $(LREF FunctionTypeOf)
+ *           $(LREF SetFunctionAttributes)
+ * ))
+ * $(TR $(TD Aggregate Type _traits) $(TD
+ *           $(LREF isNested)
+ *           $(LREF hasNested)
+ *           $(LREF FieldTypeTuple)
+ *           $(LREF RepresentationTypeTuple)
+ *           $(LREF hasAliasing)
+ *           $(LREF hasIndirections)
+ *           $(LREF hasUnsharedAliasing)
+ *           $(LREF hasElaborateCopyConstructor)
+ *           $(LREF hasElaborateAssign)
+ *           $(LREF hasElaborateDestructor)
+ *           $(LREF hasMember)
+ *           $(LREF EnumMembers)
+ *           $(LREF BaseTypeTuple)
+ *           $(LREF BaseClassesTuple)
+ *           $(LREF InterfacesTuple)
+ *           $(LREF TransitiveBaseTypeTuple)
+ *           $(LREF MemberFunctionsTuple)
+ *           $(LREF classInstanceAlignment)
+ * ))
+ * $(TR $(TD Type Conversion) $(TD
+ *           $(LREF CommonType)
+ *           $(LREF ImplicitConversionTargets)
+ *           $(LREF isImplicitlyConvertible)
+ *           $(LREF isAssignable)
+ *           $(LREF isCovariantWith)
+ * ))
+ * <!--$(TR $(TD SomethingTypeOf) $(TD
+ *           $(LREF BooleanTypeOf)
+ *           $(LREF IntegralTypeOf)
+ *           $(LREF FloatingPointTypeOf)
+ *           $(LREF NumericTypeOf)
+ *           $(LREF UnsignedTypeOf)
+ *           $(LREF SignedTypeOf)
+ *           $(LREF CharTypeOf)
+ *           $(LREF StaticArrayTypeOf)
+ *           $(LREF DynamicArrayTypeOf)
+ *           $(LREF ArrayTypeOf)
+ *           $(LREF StringTypeOf)
+ *           $(LREF AssocArrayTypeOf)
+ *           $(LREF BuiltinTypeOf)
+ * ))-->
+ * $(TR $(TD IsSomething) $(TD
+ *           $(LREF isBoolean)
+ *           $(LREF isIntegral)
+ *           $(LREF isFloatingPoint)
+ *           $(LREF isNumeric)
+ *           $(LREF isScalarType)
+ *           $(LREF isBasicType)
+ *           $(LREF isUnsigned)
+ *           $(LREF isSigned)
+ *           $(LREF isSomeChar)
+ *           $(LREF isSomeString)
+ *           $(LREF isNarrowString)
+ *           $(LREF isStaticArray)
+ *           $(LREF isDynamicArray)
+ *           $(LREF isArray)
+ *           $(LREF isAssociativeArray)
+ *           $(LREF isBuiltinType)
+ *           $(LREF isPointer)
+ *           $(LREF isAggregateType)
+ * ))
+ * $(TR $(TD xxx) $(TD
+ *           $(LREF isIterable)
+ *           $(LREF isMutable)
+ *           $(LREF isInstanceOf)
+ *           $(LREF isExpressionTuple)
+ *           $(LREF isTypeTuple)
+ *           $(LREF isFunctionPointer)
+ *           $(LREF isDelegate)
+ *           $(LREF isSomeFunction)
+ *           $(LREF isCallable)
+ *           $(LREF isAbstractFunction)
+ *           $(LREF isFinalFunction)
+ *           $(LREF isAbstractClass)
+ *           $(LREF isFinalClass)
+ * ))
+ * $(TR $(TD General Types) $(TD
+ *           $(LREF Unqual)
+ *           $(LREF ForeachType)
+ *           $(LREF OriginalType)
+ *           $(LREF PointerTarget)
+ *           $(LREF KeyType)
+ *           $(LREF ValueType)
+ *           $(LREF Unsigned)
+ *           $(LREF Largest)
+ *           $(LREF Signed)
+ *           $(LREF unsigned)
+ *           $(LREF mostNegative)
+ * ))
+ * $(TR $(TD Misc) $(TD
+ *           $(LREF mangledName)
+ *           $(LREF Select)
+ *           $(LREF select)
+ * ))
+ * )
+ *
  * Macros:
  *  WIKI = Phobos/StdTraits
  *
@@ -2892,20 +3013,15 @@ unittest
  */
 template hasElaborateAssign(S)
 {
-    static assert(isRvalueAssignable!S || isLvalueAssignable!S,
-        S.stringof ~ " is neither r- nor lvalue assignable.");
-
     static if(isStaticArray!S && S.length)
     {
         enum bool hasElaborateAssign = hasElaborateAssign!(typeof(S.init[0]));
     }
     else static if(is(S == struct))
     {
-        static if(is(typeof(S.init.opAssign(rvalueOf!S))) ||
-                  is(typeof(S.init.opAssign(lvalueOf!S))))
-            enum hasElaborateAssign = true;
-      else
-            enum hasElaborateAssign = anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
+        enum hasElaborateAssign = is(typeof(S.init.opAssign(rvalueOf!S))) ||
+                                  is(typeof(S.init.opAssign(lvalueOf!S))) ||
+            anySatisfy!(.hasElaborateAssign, FieldTypeTuple!S);
     }
     else
     {
@@ -2919,8 +3035,7 @@ unittest
 
     static struct S  { void opAssign(S) {} }
     static assert( hasElaborateAssign!S);
-    static assert(!__traits(compiles, hasElaborateAssign!(const S)));
-    static assert(!__traits(compiles, hasElaborateAssign!(shared S)));
+    static assert(!hasElaborateAssign!(const(S)));
 
     static struct S1 { void opAssign(ref S1) {} }
     static struct S2 { void opAssign(int) {} }
@@ -2954,8 +3069,8 @@ unittest
     static struct S9 { this(this) {}                             void opAssign(int) {} }
     static struct S10 { ~this() { } }
     static assert( hasElaborateAssign!S6);
-    static assert(!__traits(compiles, hasElaborateAssign!S7));
-    static assert(!__traits(compiles, hasElaborateAssign!S8));
+    static assert(!hasElaborateAssign!S7);
+    static assert(!hasElaborateAssign!S8);
     static assert( hasElaborateAssign!S9);
     static assert( hasElaborateAssign!S10);
     static struct SS6 { S6 s; }
@@ -2963,10 +3078,8 @@ unittest
     static struct SS8 { S8 s; }
     static struct SS9 { S9 s; }
     static assert( hasElaborateAssign!SS6);
-    /+ Disabled because of @@@BUG11202@@@
-    static assert(!__traits(compiles, hasElaborateAssign!SS7));
-    static assert(!__traits(compiles, hasElaborateAssign!SS8));
-    +/
+    static assert( hasElaborateAssign!SS7);
+    static assert( hasElaborateAssign!SS8);
     static assert( hasElaborateAssign!SS9);
 }
 
@@ -3793,14 +3906,10 @@ template ImplicitConversionTargets(T)
     else static if (is(T : typeof(null)))
         alias TypeTuple!(typeof(null)) ImplicitConversionTargets;
     else static if(is(T : Object))
-        alias TransitiveBaseTypeTuple!T ImplicitConversionTargets;
-    // @@@BUG@@@ this should work
-    // else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
-    //     alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
-    else static if (is(T == char[]))
-        alias TypeTuple!(const(char)[]) ImplicitConversionTargets;
+        alias TransitiveBaseTypeTuple!(T) ImplicitConversionTargets;
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
-        alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
+        alias ImplicitConversionTargets =
+            TypeTuple!(const(Unqual!(typeof(T.init[0])))[]);
     else static if (is(T : void*))
         alias TypeTuple!(void*) ImplicitConversionTargets;
     else
@@ -3809,7 +3918,8 @@ template ImplicitConversionTargets(T)
 
 unittest
 {
-    assert(is(ImplicitConversionTargets!double[0] == real));
+    static assert(is(ImplicitConversionTargets!(double)[0] == real));
+    static assert(is(ImplicitConversionTargets!(string)[0] == const(char)[]));
 }
 
 /**

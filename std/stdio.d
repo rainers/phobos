@@ -112,8 +112,8 @@ else version (MICROSOFT_STDIO)
         int _fgetwc_nolock(_iobuf*);
         void _lock_file(FILE*);
         void _unlock_file(FILE*);
-
-        int _setmode (int fd, int mode);
+        int _setmode(int, int);
+        int _fileno(FILE*);
     }
     alias _fputc_nolock FPUTC;
     alias _fputwc_nolock FPUTWC;
@@ -124,7 +124,7 @@ else version (MICROSOFT_STDIO)
     alias _unlock_file FUNLOCK;
 
     enum _O_BINARY = 0x8000;
-    alias fileno _fileno;
+
 }
 else version (GCC_IO)
 {
@@ -1904,7 +1904,8 @@ void writeln(T...)(T args)
     }
     else static if (T.length == 1 &&
                     is(typeof(args[0]) : const(char)[]) &&
-                    !is(typeof(args[0]) == enum) && !is(typeof(args[0]) == typeof(null)) &&
+                    !is(typeof(args[0]) == enum) &&
+                    !is(Unqual!(typeof(args[0])) == typeof(null)) &&
                     !isAggregateType!(typeof(args[0])))
     {
         // Specialization for strings - a very frequent case
