@@ -2357,6 +2357,7 @@ struct Appender(A : T[], T)
                         emplace(&it, items.front);
                     else
                         it = items.front;
+                    items.popFront();
                 }
             }
             else
@@ -2368,6 +2369,7 @@ struct Appender(A : T[], T)
                         emplace(&it, getUItem(items.front));
                     else
                         it = getUItem(items.front);
+                    items.popFront();
                 }
             }
 
@@ -2868,6 +2870,14 @@ unittest
     const app3 = app2;
     assert(app3.capacity >= 3);
     assert(app3.data == [1, 2, 3]);
+}
+
+unittest
+{
+    Appender!(int[]) app;
+    short[] range = [1, 2, 3];
+    app.put(range);
+    assert(app.data == [1, 2, 3]);
 }
 
 /*
