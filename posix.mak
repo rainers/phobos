@@ -290,8 +290,7 @@ endif
 	$(CC) -c $(CFLAGS_O)$@ $<
 
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME) $(MAKEFILE)
-	$(DMD) $(DFLAGS) -lib -of$@ $(D_FILES) $(OBJS)
-# $(DRUNTIME) 
+	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 dll : $(ROOT)/libphobos2.so
 

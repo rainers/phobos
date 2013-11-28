@@ -362,8 +362,7 @@ DOCS=	$(DOC)\object.html \
 $(LIB) : $(SRC_TO_COMPILE) \
 	$(ZLIB) $(DRUNTIMELIB) win32.mak win64.mak
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
-		$(ZLIB) 
-# $(DRUNTIMELIB)
+		$(ZLIB) $(DRUNTIMELIB)
 
 UNITTEST_OBJS= unittest1.obj unittest2.obj unittest2a.obj \
 		unittest3.obj unittest3a.obj unittest3b.obj unittest4.obj \
