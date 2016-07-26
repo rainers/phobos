@@ -1915,17 +1915,13 @@ template variadicFunctionStyle(func...)
 
     // TypeFuncion --> CallConvention FuncAttrs Arguments ArgClose Type
     enum callconv = functionLinkage!Func;
-    enum mfunc = mangledName!Func;
-    enum mtype = mangledName!(ReturnType!Func);
-    static assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
-
-    enum argclose = mfunc[$ - mtype.length - 1];
-    static assert(argclose >= 'X' && argclose <= 'Z');
-
+    enum sfunc = Func.stringof;
+    enum variadic = sfunc.length > 4 && sfunc[$-4..$] == "...)";
+    enum typesafe = variadic && sfunc.length > 5 && sfunc[$-5] != ' ' && sfunc[$-5] != '(';
     enum Variadic variadicFunctionStyle =
-        argclose == 'X' ? Variadic.typesafe :
-        argclose == 'Y' ? (callconv == "C") ? Variadic.c : Variadic.d :
-        Variadic.no; // 'Z'
+      !variadic ? Variadic.no :
+      typesafe ? Variadic.typesafe :
+      (callconv == "C") ? Variadic.c : Variadic.d;
 }
 
 ///
@@ -7253,7 +7249,7 @@ pragma(msg, mangledName!(C.value)); // prints "_D4test1C5valueMFNdZi"
 template mangledName(sth...)
     if (sth.length == 1)
 {
-    static if (is(typeof(sth[0]) X) && is(X == void))
+    static if (false && is(typeof(sth[0]) X) && is(X == void))
     {
         // sth[0] is a template symbol
         enum string mangledName = removeDummyEnvelope(Dummy!sth.Hook.mangleof);
@@ -7315,13 +7311,14 @@ private string removeDummyEnvelope(string s)
 
 @safe unittest
 {
+    import core.demangle : demangle;
     class C { int value() @property { return 0; } }
     static assert(mangledName!int == int.mangleof);
     static assert(mangledName!C == C.mangleof);
     static assert(mangledName!(C.value)[$ - 12 .. $] == "5valueMFNdZi");
     static assert(mangledName!mangledName == "3std6traits11mangledName");
-    static assert(mangledName!removeDummyEnvelope ==
-            "_D3std6traits19removeDummyEnvelopeFAyaZAya");
+    static assert(demangle(mangledName!removeDummyEnvelope) ==
+            "immutable(char)[] std.traits.removeDummyEnvelope(immutable(char)[])");
     int x;
   static if (is(typeof({ return x; }) : int delegate() pure))   // issue 9148
     static assert(mangledName!((int a) { return a+x; }) == "DFNaNbNiNfiZi");  // pure nothrow @safe @nogc
